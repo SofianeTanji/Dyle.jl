@@ -23,8 +23,27 @@ function infer_properties(expr::Addition)
 
     result = Set{Property}()
 
-    # TODO
+    if any(isempty(props) for props in term_props)
+        return Set{Property}() # If any term has no known properties, we can't guarantee having any property.
+    end
+
+    result_props = term_props[1]
+    for i in eachindex(term_props)[2:end]
+        term_prop = term_props[i]
+        new_result = Set{Property}()
+        for p1 in result_props
+            for p2 in term_prop
+                combined = combine_properties_addition(p1, p2)
+                if combined !== nothing
+                    push!(new_result, combined)
+                end
+            end
+        end
+        if isempty(new_result)
+            return Set{Property}() # If we can't combine any properties, we can't guarantee having any property.
+        end
+        result_props = new_result
+    end
 
     return result
-
 end
