@@ -23,9 +23,9 @@ expr3 = f(x) + g(v)
 f_props = get_properties(:f)
 g_props = get_properties(:g)
 
-expr1_props = infer_properties(expr1) # FIXME: this returns Set{Property}()
+expr1_props = infer_properties(expr1)
 expr2_props = infer_properties(expr2)
-expr3_props = infer_properties(expr3) # FIXME: this returns Set{Property}()
+expr3_props = infer_properties(expr3)
 
 
 @func quad1(R(), R())
@@ -34,4 +34,7 @@ expr3_props = infer_properties(expr3) # FIXME: this returns Set{Property}()
 @property quad2 Quadratic(0.5, 1.5)
 
 quad_sum = quad1(x) + quad2(x)
-quad_sum_props = infer_properties(quad_sum) # FIXME: this returns Set{Property}()
+quad_sum_props = infer_properties(quad_sum)
+
+expr4 = f(x) + quad1(x) + quad2(x) # (Strongly Convex + Smooth) + Quadratic + Quadratic
+expr4_props = infer_properties(expr4)

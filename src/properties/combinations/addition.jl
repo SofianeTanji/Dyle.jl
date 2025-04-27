@@ -9,7 +9,7 @@ function combine_properties_addition(p1::Convex, p2::StronglyConvex)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Convex)
-    return p1
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Convex, p2::HypoConvex)
@@ -17,15 +17,19 @@ function combine_properties_addition(p1::Convex, p2::HypoConvex)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Convex)
-    return p1
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Convex, p2::Smooth)
-    return HypoConvex(p2.L)
+    if p2.L === nothing
+        return HypoConvex()
+    else
+        return HypoConvex(p2.L)
+    end
 end
 
 function combine_properties_addition(p1::Smooth, p2::Convex)
-    return HypoConvex(p1.L)
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Convex, p2::Lipschitz)
@@ -33,7 +37,7 @@ function combine_properties_addition(p1::Convex, p2::Lipschitz)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::Convex)
-    return nothing
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Convex, p2::Linear)
@@ -47,66 +51,66 @@ end
 function combine_properties_addition(p1::Convex, p2::Quadratic)
     if p2.λₘᵢₙ === nothing
         return nothing
-    elseif p2.λₘᵢₙ < 0
-        return HypoConvex(abs(p2.λₘᵢₙ))
-    elseif p2.λₘᵢₙ == 0
-        return Convex()
     else
-        return StronglyConvex(p2.λₘᵢₙ)
+        min_val = p2.λₘᵢₙ.lower
+        if min_val < 0
+            return HypoConvex(abs(Interval(min_val, min_val)))
+        elseif min_val == 0
+            return Convex()
+        else
+            return StronglyConvex(Interval(min_val, min_val))
+        end
     end
 end
 
 function combine_properties_addition(p1::Quadratic, p2::Convex)
-    if p1.λₘᵢₙ === nothing
-        return nothing
-    elseif p1.λₘᵢₙ < 0
-        return HypoConvex(abs(p2.λₘᵢₙ))
-    elseif p1.λₘᵢₙ == 0
-        return Convex()
-    else
-        return StronglyConvex(p2.λₘᵢₙ)
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 # === STRONGLY CONVEX === #
 function combine_properties_addition(p1::StronglyConvex, p2::StronglyConvex)
-    μ1 = p1.μ === nothing ? 0.0 : p1.μ
-    μ2 = p2.μ === nothing ? 0.0 : p2.μ
-    return StronglyConvex(μ1 + μ2)
+    if p1.μ === nothing && p2.μ === nothing
+        return StronglyConvex()
+    elseif p1.μ === nothing
+        return p2
+    elseif p2.μ === nothing
+        return p1
+    end
+
+    # Both have values, add the intervals
+    lower = p1.μ.lower + p2.μ.lower
+    upper = p1.μ.upper + p2.μ.upper
+
+    return StronglyConvex(Interval(lower, upper))
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::HypoConvex)
-    μ = p1.μ === nothing ? 0.0 : p1.μ
-    ρ = p2.ρ === nothing ? 0.0 : p2.ρ
-    diff = μ - ρ
-    if diff > 0
+    if p1.μ === nothing || p2.ρ === nothing
+        return nothing
+    end
+
+    diff = p1.μ - p2.ρ
+    if diff.lower > 0
         return StronglyConvex(diff)
-    elseif diff == 0
+    elseif diff.lower == 0
         return Convex()
     else
         return HypoConvex(abs(diff))
     end
 end
 function combine_properties_addition(p1::HypoConvex, p2::StronglyConvex)
-    μ = p2.μ === nothing ? 0.0 : p2.μ
-    ρ = p1.ρ === nothing ? 0.0 : p1.ρ
-    diff = μ - ρ
-    if diff > 0
-        return StronglyConvex(diff)
-    elseif diff == 0
-        return Convex()
-    else
-        return HypoConvex(abs(diff))
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Smooth)
-    μ = p1.μ === nothing ? 0.0 : p1.μ
-    L = p2.L === nothing ? 0.0 : p2.L
-    diff = μ - L
-    if diff > 0
+    if p1.μ === nothing || p2.L === nothing
+        return nothing
+    end
+
+    diff = p1.μ - p2.L
+    if diff.lower > 0
         return StronglyConvex(diff)
-    elseif diff == 0
+    elseif diff.lower == 0
         return Convex()
     else
         return HypoConvex(abs(diff))
@@ -114,16 +118,7 @@ function combine_properties_addition(p1::StronglyConvex, p2::Smooth)
 end
 
 function combine_properties_addition(p1::Smooth, p2::StronglyConvex)
-    μ = p2.μ === nothing ? 0.0 : p2.μ
-    L = p1.L === nothing ? 0.0 : p1.L
-    diff = μ - L
-    if diff > 0
-        return StronglyConvex(diff)
-    elseif diff == 0
-        return Convex()
-    else
-        return HypoConvex(abs(diff))
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Lipschitz)
@@ -131,7 +126,7 @@ function combine_properties_addition(p1::StronglyConvex, p2::Lipschitz)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::StronglyConvex)
-    return nothing
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Linear)
@@ -139,53 +134,52 @@ function combine_properties_addition(p1::StronglyConvex, p2::Linear)
 end
 
 function combine_properties_addition(p1::Linear, p2::StronglyConvex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Quadratic)
-    μ = p1.μ === nothing ? 0.0 : p1.μ
-    λₘᵢₙ = p2.λₘᵢₙ === nothing ? 0.0 : p2.λₘᵢₙ
-    diff = μ - λₘᵢₙ
-    if diff > 0
-        return StronglyConvex(diff)
-    elseif diff == 0
+    if p1.μ === nothing || p2.λₘᵢₙ === nothing
+        return nothing
+    end
+    result = p1.μ + p2.λₘᵢₙ
+
+
+    if result.lower > 0
+        return StronglyConvex(result)
+    elseif result.lower == 0
         return Convex()
     else
-        return HypoConvex(abs(diff))
+        return HypoConvex(abs(result))
     end
 end
 
 function combine_properties_addition(p1::Quadratic, p2::StronglyConvex)
-    μ = p2.μ === nothing ? 0.0 : p2.μ
-    λₘᵢₙ = p1.λₘᵢₙ === nothing ? 0.0 : p1.λₘᵢₙ
-    diff = μ - λₘᵢₙ
-    if diff > 0
-        return StronglyConvex(diff)
-    elseif diff == 0
-        return Convex()
-    else
-        return HypoConvex(abs(diff))
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 # === HypoConvex === #
 
 function combine_properties_addition(p1::HypoConvex, p2::HypoConvex)
-    ρ1 = p1.ρ === nothing ? 0.0 : p1.ρ
-    ρ2 = p2.ρ === nothing ? 0.0 : p2.ρ
-    return HypoConvex(ρ1 + ρ2)
+    if p1.ρ === nothing && p2.ρ === nothing
+        return HypoConvex()
+    elseif p1.ρ === nothing
+        return p2
+    elseif p2.ρ === nothing
+        return p1
+    end
+    return HypoConvex(p1.ρ + p2.ρ)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Smooth)
-    ρ = p1.ρ === nothing ? 0.0 : p1.ρ
-    L = p2.L === nothing ? 0.0 : p2.L
-    return HypoConvex(ρ + L)
+    if p1.ρ === nothing || p2.L === nothing
+        return HypoConvex()
+    end
+
+    return HypoConvex(p1.ρ + p2.L)
 end
 
 function combine_properties_addition(p1::Smooth, p2::HypoConvex)
-    ρ = p2.ρ === nothing ? 0.0 : p2.ρ
-    L = p1.L === nothing ? 0.0 : p1.L
-    return HypoConvex(ρ + L)
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Lipschitz)
@@ -193,7 +187,7 @@ function combine_properties_addition(p1::HypoConvex, p2::Lipschitz)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::HypoConvex)
-    return nothing
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Linear)
@@ -201,15 +195,15 @@ function combine_properties_addition(p1::HypoConvex, p2::Linear)
 end
 
 function combine_properties_addition(p1::Linear, p2::HypoConvex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Quadratic)
     if p2.λₘᵢₙ === nothing
         return nothing
-    elseif p2.λₘᵢₙ > 0
+    elseif p2.λₘᵢₙ.lower > 0
         return combine_properties_addition(p1, StronglyConvex(p2.λₘᵢₙ))
-    elseif p2.λₘᵢₙ == 0
+    elseif p2.λₘᵢₙ.lower == 0 && p2.λₘᵢₙ.upper == 0
         return combine_properties_addition(p1, Convex())
     else
         return combine_properties_addition(p1, HypoConvex(abs(p2.λₘᵢₙ)))
@@ -217,22 +211,19 @@ function combine_properties_addition(p1::HypoConvex, p2::Quadratic)
 end
 
 function combine_properties_addition(p1::Quadratic, p2::HypoConvex)
-    if p1.λₘᵢₙ === nothing
-        return nothing
-    elseif p1.λₘᵢₙ > 0
-        return combine_properties_addition(StronglyConvex(p1.λₘᵢₙ), p2)
-    elseif p1.λₘᵢₙ == 0
-        return combine_properties_addition(Convex(), p2)
-    else
-        return combine_properties_addition(HypoConvex(abs(p1.λₘᵢₙ)), p2)
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 # === SMOOTH === #
 function combine_properties_addition(p1::Smooth, p2::Smooth)
-    L1 = p1.L === nothing ? 0.0 : p1.L
-    L2 = p2.L === nothing ? 0.0 : p2.L
-    return Smooth(L1 + L2)
+    if p1.L === nothing && p2.L === nothing
+        return Smooth()
+    elseif p1.L === nothing
+        return p2
+    elseif p2.L === nothing
+        return p1
+    end
+    return Smooth(p1.L + p2.L)
 end
 
 function combine_properties_addition(p1::Smooth, p2::Lipschitz)
@@ -240,7 +231,7 @@ function combine_properties_addition(p1::Smooth, p2::Lipschitz)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::Smooth)
-    return nothing
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Smooth, p2::Linear)
@@ -248,35 +239,33 @@ function combine_properties_addition(p1::Smooth, p2::Linear)
 end
 
 function combine_properties_addition(p1::Linear, p2::Smooth)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Smooth, p2::Quadratic)
-    L = p1.L === nothing ? 0.0 : p1.L
-
-    if p2.λₘₐₓ === nothing
+    if p1.L === nothing || p2.λₘₐₓ === nothing
         return nothing
-    else
-        return Smooth(L + 2 * abs(p2.λₘₐₓ))
     end
+    abs_λₘₐₓ = abs(p2.λₘₐₓ)
+    result = p1.L + abs_λₘₐₓ # FIXME
+    return Smooth(result)
 end
 
 function combine_properties_addition(p1::Quadratic, p2::Smooth)
-    L = p2.L === nothing ? 0.0 : p2.L
-
-    if p1.λₘₐₓ === nothing
-        return nothing
-    else
-        return Smooth(L + 2 * abs(p1.λₘₐₓ))
-    end
+    return combine_properties_addition(p2, p1)
 end
 
 # === LIPSCHITZ === #
 
 function combine_properties_addition(p1::Lipschitz, p2::Lipschitz)
-    M1 = p1.M === nothing ? 0.0 : p1.M
-    M2 = p2.M === nothing ? 0.0 : p2.M
-    return Lipschitz(M1 + M2)
+    if p1.M === nothing && p2.M === nothing
+        return Lipschitz()
+    elseif p1.M === nothing
+        return p2
+    elseif p2.M === nothing
+        return p1
+    end
+    return Lipschitz(p1.M + p2.M)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::Linear)
@@ -284,7 +273,7 @@ function combine_properties_addition(p1::Lipschitz, p2::Linear)
 end
 
 function combine_properties_addition(p1::Linear, p2::Lipschitz)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return combine_properties_addition(p2, p1)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::Quadratic)
@@ -292,7 +281,7 @@ function combine_properties_addition(p1::Lipschitz, p2::Quadratic)
 end
 
 function combine_properties_addition(p1::Quadratic, p2::Lipschitz)
-    return nothing
+    return combine_properties_addition(p2, p1)
 end
 
 # === LINEAR === #
@@ -318,7 +307,7 @@ function combine_properties_addition(p1::Linear, p2::Quadratic)
 end
 
 function combine_properties_addition(p1::Quadratic, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return combine_properties_addition(p2, p1)
 end
 
 # === QUADRATIC === #
