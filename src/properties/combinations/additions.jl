@@ -12,11 +12,11 @@ function combine_properties_addition(p1::StronglyConvex, p2::Convex)
     return p1
 end
 
-function combine_properties_addition(p1::Convex, p2::Hypoconvex)
+function combine_properties_addition(p1::Convex, p2::HypoConvex)
     return p2
 end
 
-function combine_properties_addition(p1::Hypoconvex, p2::Convex)
+function combine_properties_addition(p1::HypoConvex, p2::Convex)
     return p1
 end
 
@@ -75,7 +75,7 @@ function combine_properties_addition(p1::StronglyConvex, p2::StronglyConvex)
     return StronglyConvex(μ1 + μ2)
 end
 
-function combine_properties_addition(p1::StronglyConvex, p2::Hypoconvex)
+function combine_properties_addition(p1::StronglyConvex, p2::HypoConvex)
     μ = p1.μ === nothing ? 0.0 : p1.μ
     ρ = p2.ρ === nothing ? 0.0 : p2.ρ
     diff = μ - ρ
@@ -87,7 +87,7 @@ function combine_properties_addition(p1::StronglyConvex, p2::Hypoconvex)
         return HypoConvex(abs(diff))
     end
 end
-function combine_properties_addition(p1::Hypoconvex, p2::StronglyConvex)
+function combine_properties_addition(p1::HypoConvex, p2::StronglyConvex)
     μ = p2.μ === nothing ? 0.0 : p2.μ
     ρ = p1.ρ === nothing ? 0.0 : p1.ρ
     diff = μ - ρ
@@ -168,43 +168,43 @@ function combine_properties_addition(p1::Quadratic, p2::StronglyConvex)
     end
 end
 
-# === HYPOCONVEX === #
+# === HypoConvex === #
 
-function combine_properties_addition(p1::Hypoconvex, p2::Hypoconvex)
+function combine_properties_addition(p1::HypoConvex, p2::HypoConvex)
     ρ1 = p1.ρ === nothing ? 0.0 : p1.ρ
     ρ2 = p2.ρ === nothing ? 0.0 : p2.ρ
     return HypoConvex(ρ1 + ρ2)
 end
 
-function combine_properties_addition(p1::Hypoconvex, p2::Smooth)
+function combine_properties_addition(p1::HypoConvex, p2::Smooth)
     ρ = p1.ρ === nothing ? 0.0 : p1.ρ
     L = p2.L === nothing ? 0.0 : p2.L
     return HypoConvex(ρ + L)
 end
 
-function combine_properties_addition(p1::Smooth, p2::Hypoconvex)
+function combine_properties_addition(p1::Smooth, p2::HypoConvex)
     ρ = p2.ρ === nothing ? 0.0 : p2.ρ
     L = p1.L === nothing ? 0.0 : p1.L
     return HypoConvex(ρ + L)
 end
 
-function combine_properties_addition(p1::Hypoconvex, p2::Lipschitz)
+function combine_properties_addition(p1::HypoConvex, p2::Lipschitz)
     return nothing
 end
 
-function combine_properties_addition(p1::Lipschitz, p2::Hypoconvex)
+function combine_properties_addition(p1::Lipschitz, p2::HypoConvex)
     return nothing
 end
 
-function combine_properties_addition(p1::Hypoconvex, p2::Linear)
+function combine_properties_addition(p1::HypoConvex, p2::Linear)
     error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
-function combine_properties_addition(p1::Linear, p2::Hypoconvex)
+function combine_properties_addition(p1::Linear, p2::HypoConvex)
     error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
-function combine_properties_addition(p1::Hypoconvex, p2::Quadratic)
+function combine_properties_addition(p1::HypoConvex, p2::Quadratic)
     if p2.λₘᵢₙ === nothing
         return nothing
     elseif p2.λₘᵢₙ > 0
@@ -216,7 +216,7 @@ function combine_properties_addition(p1::Hypoconvex, p2::Quadratic)
     end
 end
 
-function combine_properties_addition(p1::Quadratic, p2::Hypoconvex)
+function combine_properties_addition(p1::Quadratic, p2::HypoConvex)
     if p1.λₘᵢₙ === nothing
         return nothing
     elseif p1.λₘᵢₙ > 0
@@ -297,8 +297,20 @@ end
 
 # === LINEAR === #
 function combine_properties_addition(p1::Linear, p2::Linear)
-    # TODO : requires to specify intervals
-    return -1
+    λₘᵢₙ = nothing
+    λₘₐₓ = nothing
+    if p1.λₘᵢₙ !== nothing && p2.λₘᵢₙ !== nothing && p2.λₘₐₓ !== nothing
+        min_lower = p1.λₘᵢₙ.lower + p2.λₘᵢₙ.lower
+        min_upper = p1.λₘᵢₙ.upper + p2.λₘₐₓ.upper
+        λₘᵢₙ = Interval(min_lower, min_upper)
+    end
+
+    if p1.λₘₐₓ !== nothing && p2.λₘᵢₙ !== nothing && p2.λₘₐₓ !== nothing
+        max_lower = p1.λₘₐₓ.lower + p2.λₘᵢₙ.lower
+        max_upper = p1.λₘₐₓ.upper + p2.λₘₐₓ.upper
+        λₘₐₓ = Interval(max_lower, max_upper)
+    end
+    return Linear(λₘᵢₙ, λₘₐₓ)
 end
 
 function combine_properties_addition(p1::Linear, p2::Quadratic)
@@ -311,6 +323,19 @@ end
 
 # === QUADRATIC === #
 function combine_properties_addition(p1::Quadratic, p2::Quadratic)
-    # TODO : requires to specify intervals
-    return -1
+    λₘᵢₙ = nothing
+    λₘₐₓ = nothing
+
+    if p1.λₘᵢₙ !== nothing && p2.λₘᵢₙ !== nothing && p2.λₘₐₓ !== nothing
+        min_lower = p1.λₘᵢₙ.lower + p2.λₘᵢₙ.lower
+        min_upper = p1.λₘᵢₙ.upper + p2.λₘₐₓ.upper
+        λₘᵢₙ = Interval(min_lower, min_upper)
+    end
+
+    if p1.λₘₐₓ !== nothing && p2.λₘᵢₙ !== nothing && p2.λₘₐₓ !== nothing
+        max_lower = p1.λₘₐₓ.lower + p2.λₘᵢₙ.lower
+        max_upper = p1.λₘₐₓ.upper + p2.λₘₐₓ.upper
+        λₘₐₓ = Interval(max_lower, max_upper)
+    end
+    return Quadratic(λₘᵢₙ, λₘₐₓ)
 end
