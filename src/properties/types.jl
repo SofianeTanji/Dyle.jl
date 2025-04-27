@@ -1,5 +1,17 @@
 abstract type Property end
 
+## Interval type (especially for eigenvalues)
+struct Interval
+    lower::Float64
+    upper::Float64
+
+    # Constructor for proper intervals
+    Interval(lower::Float64, upper::Float64) = new(lower, upper)
+
+    # Constructor for degenerate intervals
+    Interval(value::Float64) = new(value, value)
+end
+
 ## Curvature
 
 struct Convex <: Property end
@@ -28,17 +40,29 @@ end
 
 
 struct Linear <: Property
-    λₘᵢₙ::Union{Float64,Nothing} # can be unspecified
-    λₘₐₓ::Union{Float64,Nothing} # can be unspecified
-    Linear(λₘᵢₙ::Union{Float64,Nothing} = nothing, λₘₐₓ::Union{Float64,Nothing} = nothing) =
-        new(λₘᵢₙ, λₘₐₓ)
+    λₘᵢₙ::Union{Interval,Nothing} # can be unspecified
+    λₘₐₓ::Union{Interval,Nothing} # can be unspecified
+
+    # Constructor for proper intervals
+    Linear(
+        λₘᵢₙ::Union{Interval,Float64,Nothing} = nothing,
+        λₘₐₓ::Union{Interval,Float64,Nothing} = nothing,
+    ) = new(
+        isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
+        isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+    )
 end
 
 struct Quadratic <: Property
-    λₘᵢₙ::Union{Float64,Nothing} # can be unspecified
-    λₘₐₓ::Union{Float64,Nothing} # can be unspecified
+    λₘᵢₙ::Union{Interval,Nothing} # can be unspecified
+    λₘₐₓ::Union{Interval,Nothing} # can be unspecified
+
+    # Constructor for proper intervals
     Quadratic(
-        λₘᵢₙ::Union{Float64,Nothing} = nothing,
-        λₘₐₓ::Union{Float64,Nothing} = nothing,
-    ) = new(λₘᵢₙ, λₘₐₓ)
+        λₘᵢₙ::Union{Interval,Float64,Nothing} = nothing,
+        λₘₐₓ::Union{Interval,Float64,Nothing} = nothing,
+    ) = new(
+        isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
+        isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+    )
 end

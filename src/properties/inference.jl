@@ -28,8 +28,12 @@ function infer_properties(expr::Addition)
     end
 
     result_props = term_props[1]
+
     for i in eachindex(term_props)[2:end]
         term_prop = term_props[i]
+        if isempty(term_prop)
+            continue
+        end
         new_result = Set{Property}()
         for p1 in result_props
             for p2 in term_prop
@@ -39,9 +43,7 @@ function infer_properties(expr::Addition)
                 end
             end
         end
-        if isempty(new_result)
-            return Set{Property}() # If we can't combine any properties, we can't guarantee having any property.
-        end
+
         result_props = new_result
     end
 

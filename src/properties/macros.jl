@@ -13,11 +13,11 @@ macro property(func_expr, property_expr...)
     result = Expr(:block)
 
     if !isempty(property_expr) # Clear existing properties if any. # TODO: Check if this is necessary.
-        push!(result.args, :(clear_properties($(QuoteNode(func_name)))))
+        push!(result.args, :(clear_properties!($(QuoteNode(func_name)))))
     end
 
     for prop in property_expr
-        push!(result.args, :(register_property($(QuoteNode(func_name))), $(esc(prop))))
+        push!(result.args, :(register_property!($(QuoteNode(func_name)), $(esc(prop)))))
     end
     return result
 end

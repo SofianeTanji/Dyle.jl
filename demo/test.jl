@@ -1,5 +1,6 @@
 using Dyle
 using Dyle.Language
+using Dyle.Properties
 using Test
 
 Rns = Rn(:n)
@@ -10,11 +11,27 @@ Rns = Rn(:n)
 
 @func f(R(), R())
 @func g(Rns, R())
-@func h(R(), Rns)
-expr1 = f(x) + f(y)
+
+expr1 = f(x) + f(x)
 expr2 = g(v)
 expr3 = f(x) + g(v)
-expr4 = f(x) + g(v) + f(y)
-expr5 = f(g(v))
-expr6 = min(h(y), h(x))
-expr = (f(x) - g(v)) + f(x) + g(h(x))
+
+@property f StronglyConvex(1.0) Smooth(2.0)
+@property g Convex() Lipschitz(5.0)
+@property h Linear(1.0, 3.0)
+
+f_props = get_properties(:f)
+g_props = get_properties(:g)
+
+expr1_props = infer_properties(expr1) # FIXME: this returns Set{Property}()
+expr2_props = infer_properties(expr2)
+expr3_props = infer_properties(expr3) # FIXME: this returns Set{Property}()
+
+
+@func quad1(R(), R())
+@func quad2(R(), R())
+@property quad1 Quadratic(1.0, 2.0)
+@property quad2 Quadratic(0.5, 1.5)
+
+quad_sum = quad1(x) + quad2(x)
+quad_sum_props = infer_properties(quad_sum) # FIXME: this returns Set{Property}()
