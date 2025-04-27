@@ -8,7 +8,8 @@ include("macros.jl")
 include("inference.jl")
 
 # Combinations
-include("combinations/additions.jl")
+include("combinations/addition.jl")
+include("combinations/substraction.jl")
 
 # === PUBLIC API === #
 export Property,
