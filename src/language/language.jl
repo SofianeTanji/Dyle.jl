@@ -11,7 +11,7 @@ export Space, R, Rn
 
 ## AST node types
 export Expression,
-    Variable, FunctionCall, Addition, Substraction, Composition, Maximum, Minimum
+    Variable, FunctionCall, Addition, Subtraction, Composition, Maximum, Minimum
 
 ## Parser
 export parser
