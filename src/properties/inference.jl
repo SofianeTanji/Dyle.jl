@@ -115,3 +115,57 @@ function infer_properties(expr::Subtraction)
     println("Final result: $result_props")
     return result_props
 end
+
+function infer_properties(expr::Composition)
+    println("Entering infer_properties for Composition")
+
+    # Get properties of outer and inner expressions
+    outer_props = infer_properties(expr.outer)
+    inner_props = infer_properties(expr.inner)
+
+    println("Outer properties: $outer_props")
+    println("Inner properties: $inner_props")
+
+    if isempty(outer_props) || isempty(inner_props)
+        println("At least one expression has no properties, returning empty set")
+        return Set{Property}()
+    end
+
+    # Initialize result set
+    result_props = Set{Property}()
+
+    # First check for special cases that require examining multiple properties
+    println("Checking set-level composition properties")
+    set_props = combine_properties_composition(outer_props, inner_props)
+    if set_props !== nothing
+        println("  Found set-level properties: $set_props")
+        union!(result_props, set_props)
+    else
+        println("  No set-level properties found")
+    end
+
+    # Now apply the binary combination rules for all property pairs
+    println("Applying binary combination rules")
+    for p1 in outer_props
+        for p2 in inner_props
+            println("  Trying to combine $p1 with $p2")
+            combined = combine_properties_composition(p1, p2)
+            if combined !== nothing
+                if combined isa Set
+                    for c in combined
+                        println("    Adding set result: $c")
+                        push!(result_props, c)
+                    end
+                else
+                    println("    Adding result: $combined")
+                    push!(result_props, combined)
+                end
+            else
+                println("    Result: nothing (incompatible)")
+            end
+        end
+    end
+
+    println("Final result: $result_props")
+    return result_props
+end
