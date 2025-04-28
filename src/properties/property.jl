@@ -9,7 +9,7 @@ include("inference.jl")
 
 # Combinations
 include("combinations/addition.jl")
-include("combinations/substraction.jl")
+include("combinations/subtraction.jl")
 
 # === PUBLIC API === #
 export Property,

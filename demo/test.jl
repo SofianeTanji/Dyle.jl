@@ -38,3 +38,7 @@ quad_sum_props = infer_properties(quad_sum)
 
 expr4 = f(x) + quad1(x) + quad2(x) # (Strongly Convex + Smooth) + Quadratic + Quadratic
 expr4_props = infer_properties(expr4)
+
+expr5 = f(x) - f(x)
+
+expr5_props = infer_properties(expr5)
