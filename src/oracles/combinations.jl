@@ -4,21 +4,20 @@ It uses multiple dispatch to handle different expression types and oracle types.
 """
 
 # Registry for special combination handlers
-# The key is (operation_type, [function_symbols], oracle_type)
+# The key is (operation_type, [function_symbols], DataType)
 # Example: (Addition, [:l1norm, :l1norm], ProximalOracle) => handler_function
 const special_combination_registry =
     Dict{Tuple{DataType,Vector{Symbol},DataType},Function}()
 
 """
-    register_special_combination(op_type::DataType, funcs::Vector{Symbol},
-                               oracle_type::Type{<:Oracle}, handler::Function)
+    register_special_combination(op_type::DataType, funcs::Vector{Symbol}, oracle_type, handler::Function)
 
 Register a special combination handler for specific functions and oracle types.
 
 # Arguments
 - `op_type::DataType`: The operation type (e.g., Addition, Composition)
 - `funcs::Vector{Symbol}`: The function symbols involved in the combination
-- `oracle_type::Type{<:Oracle}`: The type of oracle being combined
+- `oracle_type`: The type of oracle being combined (can be parameterized, type alias, or instance)
 - `handler::Function`: The function that implements the special combination
 
 # Returns
@@ -27,79 +26,78 @@ Register a special combination handler for specific functions and oracle types.
 # Example
 ```julia
 register_special_combination(Addition, [:l1norm, :l1norm], ProximalOracle,
-                           expr -> special_l1_proximal_handler(expr))
+                          expr -> special_l1_proximal_handler(expr))
 ```
 """
 function register_special_combination(
     op_type::DataType,
     funcs::Vector{Symbol},
-    oracle_type::Type{<:Oracle},
+    oracle_type,
     handler::Function,
 )
-    special_combination_registry[(op_type, funcs, oracle_type)] = handler
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle_type)
+
+    special_combination_registry[(op_type, funcs, base_type)] = handler
     return handler
 end
 
 """
-    has_special_combination(op_type::DataType, funcs::Vector{Symbol},
-                          oracle_type::Type{<:Oracle})
+    has_special_combination(op_type::DataType, funcs::Vector{Symbol}, oracle_type)
 
 Check if a special combination handler exists for the given operation, functions, and oracle type.
 
 # Arguments
 - `op_type::DataType`: The operation type (e.g., Addition, Composition)
 - `funcs::Vector{Symbol}`: The function symbols involved in the combination
-- `oracle_type::Type{<:Oracle}`: The type of oracle being combined
+- `oracle_type`: The type of oracle being combined (can be parameterized, type alias, or instance)
 
 # Returns
 - `true` if a special handler exists, `false` otherwise
 """
-function has_special_combination(
-    op_type::DataType,
-    funcs::Vector{Symbol},
-    oracle_type::Type{<:Oracle},
-)
-    return haskey(special_combination_registry, (op_type, funcs, oracle_type))
+function has_special_combination(op_type::DataType, funcs::Vector{Symbol}, oracle_type)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle_type)
+
+    return haskey(special_combination_registry, (op_type, funcs, base_type))
 end
 
 """
-    get_special_combination(op_type::DataType, funcs::Vector{Symbol},
-                          oracle_type::Type{<:Oracle})
+    get_special_combination(op_type::DataType, funcs::Vector{Symbol}, oracle_type)
 
 Get the special combination handler for the given operation, functions, and oracle type.
 
 # Arguments
 - `op_type::DataType`: The operation type (e.g., Addition, Composition)
 - `funcs::Vector{Symbol}`: The function symbols involved in the combination
-- `oracle_type::Type{<:Oracle}`: The type of oracle being combined
+- `oracle_type`: The type of oracle being combined (can be parameterized, type alias, or instance)
 
 # Returns
 - The special handler function if it exists, otherwise nothing
 """
-function get_special_combination(
-    op_type::DataType,
-    funcs::Vector{Symbol},
-    oracle_type::Type{<:Oracle},
-)
-    if has_special_combination(op_type, funcs, oracle_type)
-        return special_combination_registry[(op_type, funcs, oracle_type)]
+function get_special_combination(op_type::DataType, funcs::Vector{Symbol}, oracle_type)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle_type)
+
+    if haskey(special_combination_registry, (op_type, funcs, base_type))
+        return special_combination_registry[(op_type, funcs, base_type)]
     end
     return nothing
 end
 
 """
-    check_for_special_combination(expr::Expression, oracle_type::Type{<:Oracle})
+    check_for_special_combination(expr::Expression, oracle_type)
 
 Check if the expression matches any registered special combination pattern.
 
 # Arguments
 - `expr::Expression`: The expression to check
-- `oracle_type::Type{<:Oracle}`: The type of oracle being combined
+- `oracle_type`: The type of oracle being combined (can be parameterized, type alias, or instance)
 
 # Returns
 - The result of the special handler if a match is found, otherwise nothing
 """
-function check_for_special_combination(expr::Expression, oracle_type::Type{<:Oracle})
+function check_for_special_combination(expr::Expression, oracle_type)
     # Get the operation type
     op_type = typeof(expr)
 
@@ -120,8 +118,11 @@ function check_for_special_combination(expr::Expression, oracle_type::Type{<:Ora
         return nothing
     end
 
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle_type)
+
     # Check if we have a special handler for this combination
-    handler = get_special_combination(op_type, funcs, oracle_type)
+    handler = get_special_combination(op_type, funcs, base_type)
     if handler !== nothing
         return handler(expr)
     end
@@ -130,58 +131,83 @@ function check_for_special_combination(expr::Expression, oracle_type::Type{<:Ora
 end
 
 """
-    get_oracle_for_expression(expr::Expression, oracle_type::Type{<:Oracle})
+    get_oracle_for_expression(expr::Expression, oracle)
 
-Get an oracle for any expression, either from the registry (for function calls)
-or by combining oracles (for composite expressions).
+Get an oracle for any expression, handling exactness properly.
 
 # Arguments
 - `expr::Expression`: The expression to get an oracle for
-- `oracle_type::Type{<:Oracle}`: The type of oracle to get
+- `oracle`: An instance or type of the oracle to get
 
 # Returns
 - A function implementing the oracle if possible, otherwise nothing
 """
+function get_oracle_for_expression(expr::Expression, oracle)
+    # Check for special combinations first
+    special_oracle = check_for_special_combination(expr, oracle)
+    if special_oracle !== nothing
+        return special_oracle
+    end
+
+    # Fall back to regular combination logic
+    return combine_oracles(expr, oracle)
+end
 
 """
-  get_oracle_for_expression(fc::FunctionCall, OracleType)
+  get_oracle_for_expression(fc::FunctionCall, oracle)
 
 Detect nested f(g(x)) and inline compose oracles for Eval/Deriv.
-Otherwise fall back to the plain function‐call registry.
+Otherwise fall back to the plain function-call registry.
+
+# Arguments
+- `fc::FunctionCall`: The function call expression
+- `oracle`: An instance or type of the oracle to get
+
+# Returns
+- A function implementing the oracle if possible, otherwise nothing
 """
-function get_oracle_for_expression(fc::Language.FunctionCall, ::Type{T}) where {T<:Oracle}
-    # composition case: single‐arg call whose arg is itself a FunctionCall
+function get_oracle_for_expression(fc::Language.FunctionCall, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
+
+    # Composition case: single-arg call whose arg is itself a FunctionCall
     if length(fc.args) == 1 && fc.args[1] isa Language.FunctionCall
         inner = fc.args[1]
         name = fc.name
-        if T === EvaluationOracle
-            ie = get_oracle_for_expression(inner, EvaluationOracle)
-            oe = get_oracle(name, EvaluationOracle)
-            (ie === nothing || oe === nothing) && return nothing
-            return x -> oe(ie(x))
-        elseif T === DerivativeOracle
-            ie_eval = get_oracle_for_expression(inner, EvaluationOracle)
-            oe_deriv = get_oracle(name, DerivativeOracle)
-            ie_deriv = get_oracle_for_expression(inner, DerivativeOracle)
-            (ie_eval === nothing || oe_deriv === nothing || ie_deriv === nothing) &&
+
+        if base_type == EvaluationOracle
+            # Try to get inner and outer oracles
+            ie = get_oracle_for_expression(inner, oracle)
+            oe = get_oracle(name, oracle)
+
+            if ie === nothing || oe === nothing
                 return nothing
+            end
+
+            # Composed oracle for evaluation
+            return x -> oe(ie(x))
+
+        elseif base_type == DerivativeOracle
+            # Need evaluation oracle for inner and derivative oracles for both
+            ie_eval = get_oracle_for_expression(inner, EvaluationOracle())
+            oe_deriv = get_oracle(name, oracle)
+            ie_deriv = get_oracle_for_expression(inner, oracle)
+
+            if ie_eval === nothing || oe_deriv === nothing || ie_deriv === nothing
+                return nothing
+            end
+
+            # Composed derivative oracle (chain rule)
             return x -> oe_deriv(ie_eval(x)) * ie_deriv(x)
-        else
-            # no default composition logic for other oracle types
-            return nothing
         end
     end
-    # plain function‐call
-    return get_oracle(fc.name, T)
-end
 
-# Fallback: composite expressions (Addition, Composition AST, etc.)
-function get_oracle_for_expression(expr::Language.Expression, ::Type{T}) where {T<:Oracle}
-    return combine_oracles(expr, T)
+    # Plain function call
+    return get_oracle(fc.name, oracle)
 end
 
 """
-    combine_oracles(expr::Expression, oracle_type::Type{<:Oracle})
+    combine_oracles(expr::Expression, oracle)
 
 Main entry point for combining oracles for complex expressions.
 This function attempts to create a composed oracle for a complex expression
@@ -189,12 +215,12 @@ based on the oracles of its components.
 
 # Arguments
 - `expr::Expression`: The expression to combine oracles for
-- `oracle_type::Type{<:Oracle}`: The type of oracle to combine
+- `oracle`: An instance or type of the oracle to combine
 
 # Returns
 - A function implementing the combined oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Expression, oracle_type::Type{<:Oracle})
+function combine_oracles(expr::Expression, oracle)
     # Default fallback returns nothing
     return nothing
 end
@@ -202,360 +228,239 @@ end
 # === ADDITION === #
 
 """
-    combine_oracles(expr::Addition, ::Type{EvaluationOracle})
+    combine_oracles(expr::Addition, oracle)
 
 Combine evaluation oracles for an addition expression.
 The result is the sum of evaluating each term.
 
 # Arguments
 - `expr::Addition`: The addition expression
-- `::Type{EvaluationOracle}`: The evaluation oracle type
+- `oracle`: The oracle instance or type
 
 # Returns
 - A function implementing the combined evaluation oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Addition, ::Type{EvaluationOracle})
-    # Get oracles for all terms
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, EvaluationOracle)
-        if oracle === nothing
-            return nothing  # If any term is missing an oracle, we can't combine
+function combine_oracles(expr::Addition, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
+
+    # Different handling based on oracle type
+    if base_type == EvaluationOracle
+        # Get oracles for all terms
+        oracles = []
+        for term in expr.terms
+            term_oracle = get_oracle_for_expression(term, oracle)
+            if term_oracle === nothing
+                return nothing  # If any term is missing an oracle, we can't combine
+            end
+            push!(oracles, term_oracle)
         end
-        push!(oracles, oracle)
-    end
 
-    # Return the combined oracle
-    return x -> sum(oracle(x) for oracle in oracles)
-end
-
-"""
-    combine_oracles(expr::Addition, ::Type{DerivativeOracle})
-
-Combine derivative oracles for an addition expression.
-The result is the sum of the derivatives of each term.
-
-# Arguments
-- `expr::Addition`: The addition expression
-- `::Type{DerivativeOracle}`: The derivative oracle type
-
-# Returns
-- A function implementing the combined derivative oracle if possible, otherwise nothing
-"""
-function combine_oracles(expr::Addition, ::Type{DerivativeOracle})
-    # Get oracles for all terms
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, DerivativeOracle)
-        if oracle === nothing
-            return nothing  # If any term is missing an oracle, we can't combine
+        # Return the combined oracle
+        return x -> sum(oracle(x) for oracle in oracles)
+    elseif base_type == DerivativeOracle
+        # Get oracles for all terms
+        oracles = []
+        for term in expr.terms
+            term_oracle = get_oracle_for_expression(term, oracle)
+            if term_oracle === nothing
+                return nothing  # If any term is missing an oracle, we can't combine
+            end
+            push!(oracles, term_oracle)
         end
-        push!(oracles, oracle)
+
+        # Return the combined oracle
+        return x -> sum(oracle(x) for oracle in oracles)
+    else
+        # For other oracle types, the combination may not be straightforward
+        # Special cases should be handled through the special combination registry
+        return nothing
     end
-
-    # Return the combined oracle
-    return x -> sum(oracle(x) for oracle in oracles)
-end
-
-"""
-    combine_oracles(expr::Addition, ::Type{ProximalOracle})
-
-Combine proximal oracles for an addition expression.
-Note: In general, the proximal operator of a sum is not the sum of proximal operators.
-This function returns nothing because we can't directly combine proximal operators for sums.
-
-# Arguments
-- `expr::Addition`: The addition expression
-- `::Type{ProximalOracle}`: The proximal oracle type
-
-# Returns
-- Nothing, as we can't directly combine proximal operators for sums in the general case.
-  Special cases are handled through the special combination registry.
-"""
-function combine_oracles(expr::Addition, ::Type{ProximalOracle})
-    # In general, the proximal operator of a sum is not the sum of proximal operators
-    # Special cases are handled through the special combination registry
-    return nothing
 end
 
 # === SUBTRACTION === #
 
 """
-    combine_oracles(expr::Subtraction, ::Type{EvaluationOracle})
+    combine_oracles(expr::Subtraction, oracle)
 
-Combine evaluation oracles for a subtraction expression.
-The result is the first term minus all subsequent terms.
+Combine oracles for a subtraction expression.
+The result depends on the oracle type.
 
 # Arguments
 - `expr::Subtraction`: The subtraction expression
-- `::Type{EvaluationOracle}`: The evaluation oracle type
+- `oracle`: The oracle instance or type
 
 # Returns
-- A function implementing the combined evaluation oracle if possible, otherwise nothing
+- A function implementing the combined oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Subtraction, ::Type{EvaluationOracle})
-    if isempty(expr.terms)
-        return nothing
-    end
+function combine_oracles(expr::Subtraction, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
 
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, EvaluationOracle)
-        if oracle === nothing
+    # Different handling based on oracle type
+    if base_type == EvaluationOracle || base_type == DerivativeOracle
+        if isempty(expr.terms)
             return nothing
         end
-        push!(oracles, oracle)
-    end
 
-    return function (x)
-        result = oracles[1](x)
-        for i = 2:length(oracles)
-            result -= oracles[i](x)
+        oracles = []
+        for term in expr.terms
+            term_oracle = get_oracle_for_expression(term, oracle)
+            if term_oracle === nothing
+                return nothing
+            end
+            push!(oracles, term_oracle)
         end
-        return result
-    end
-end
 
-"""
-    combine_oracles(expr::Subtraction, ::Type{DerivativeOracle})
-
-Combine derivative oracles for a subtraction expression.
-The result is the derivative of the first term minus the derivatives of all subsequent terms.
-
-# Arguments
-- `expr::Subtraction`: The subtraction expression
-- `::Type{DerivativeOracle}`: The derivative oracle type
-
-# Returns
-- A function implementing the combined derivative oracle if possible, otherwise nothing
-"""
-function combine_oracles(expr::Subtraction, ::Type{DerivativeOracle})
-    if isempty(expr.terms)
+        return function (x)
+            result = oracles[1](x)
+            for i = 2:length(oracles)
+                result -= oracles[i](x)
+            end
+            return result
+        end
+    else
+        # For other oracle types, the combination may not be straightforward
+        # Special cases should be handled through the special combination registry
         return nothing
     end
-
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, DerivativeOracle)
-        if oracle === nothing
-            return nothing
-        end
-        push!(oracles, oracle)
-    end
-
-    return function (x)
-        result = oracles[1](x)
-        for i = 2:length(oracles)
-            result -= oracles[i](x)
-        end
-        return result
-    end
-end
-
-"""
-    combine_oracles(expr::Subtraction, ::Type{ProximalOracle})
-
-Combine proximal oracles for a subtraction expression.
-Like with addition, we can't directly combine proximal operators for differences.
-
-# Arguments
-- `expr::Subtraction`: The subtraction expression
-- `::Type{ProximalOracle}`: The proximal oracle type
-
-# Returns
-- Nothing, as we can't directly combine proximal operators for differences in the general case.
-  Special cases are handled through the special combination registry.
-"""
-function combine_oracles(expr::Subtraction, ::Type{ProximalOracle})
-    # Similar to addition, we can't directly combine proximal operators for differences
-    # Special cases are handled through the special combination registry
-    return nothing
 end
 
 # === COMPOSITION === #
 
 """
-    combine_oracles(expr::Composition, ::Type{EvaluationOracle})
+    combine_oracles(expr::Composition, oracle)
 
-Combine evaluation oracles for a composition expression (f ∘ g).
-The result is f(g(x)).
+Combine oracles for a composition expression (f ∘ g).
+The result depends on the oracle type.
 
 # Arguments
 - `expr::Composition`: The composition expression
-- `::Type{EvaluationOracle}`: The evaluation oracle type
+- `oracle`: The oracle instance or type
 
 # Returns
-- A function implementing the combined evaluation oracle if possible, otherwise nothing
+- A function implementing the combined oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Composition, ::Type{EvaluationOracle})
-    outer_oracle = get_oracle_for_expression(expr.outer, EvaluationOracle)
-    inner_oracle = get_oracle_for_expression(expr.inner, EvaluationOracle)
+function combine_oracles(expr::Composition, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
 
-    if outer_oracle === nothing || inner_oracle === nothing
+    # Different handling based on oracle type
+    if base_type == EvaluationOracle
+        outer_oracle = get_oracle_for_expression(expr.outer, oracle)
+        inner_oracle = get_oracle_for_expression(expr.inner, oracle)
+
+        if outer_oracle === nothing || inner_oracle === nothing
+            return nothing
+        end
+
+        return x -> outer_oracle(inner_oracle(x))
+    elseif base_type == DerivativeOracle
+        # We need both evaluation and derivative oracles for the chain rule
+        outer_eval = get_oracle_for_expression(expr.outer, EvaluationOracle())
+        inner_eval = get_oracle_for_expression(expr.inner, EvaluationOracle())
+        outer_deriv = get_oracle_for_expression(expr.outer, oracle)
+        inner_deriv = get_oracle_for_expression(expr.inner, oracle)
+
+        if any(o === nothing for o in [outer_eval, inner_eval, outer_deriv, inner_deriv])
+            return nothing
+        end
+
+        # Chain rule: (f ∘ g)'(x) = f'(g(x)) * g'(x)
+        return x -> outer_deriv(inner_eval(x)) * inner_deriv(x)
+    else
+        # For other oracle types, the combination may not be straightforward
+        # Special cases should be handled through the special combination registry
         return nothing
     end
-
-    return x -> outer_oracle(inner_oracle(x))
-end
-
-"""
-    combine_oracles(expr::Composition, ::Type{DerivativeOracle})
-
-Combine derivative oracles for a composition expression (f ∘ g).
-The result uses the chain rule: (f ∘ g)'(x) = f'(g(x)) * g'(x)
-
-# Arguments
-- `expr::Composition`: The composition expression
-- `::Type{DerivativeOracle}`: The derivative oracle type
-
-# Returns
-- A function implementing the combined derivative oracle if possible, otherwise nothing
-"""
-function combine_oracles(expr::Composition, ::Type{DerivativeOracle})
-    # We need both evaluation and derivative oracles for both functions
-    outer_eval = get_oracle_for_expression(expr.outer, EvaluationOracle)
-    inner_eval = get_oracle_for_expression(expr.inner, EvaluationOracle)
-    outer_deriv = get_oracle_for_expression(expr.outer, DerivativeOracle)
-    inner_deriv = get_oracle_for_expression(expr.inner, DerivativeOracle)
-
-    if any(
-        oracle === nothing for oracle in [outer_eval, inner_eval, outer_deriv, inner_deriv]
-    )
-        return nothing
-    end
-
-    # Chain rule: (f ∘ g)'(x) = f'(g(x)) * g'(x)
-    return x -> outer_deriv(inner_eval(x)) * inner_deriv(x)
-end
-
-"""
-    combine_oracles(expr::Composition, ::Type{ProximalOracle})
-
-Combine proximal oracles for a composition expression.
-In general, we can't directly compute the proximal operator of a composition.
-
-# Arguments
-- `expr::Composition`: The composition expression
-- `::Type{ProximalOracle}`: The proximal oracle type
-
-# Returns
-- Nothing, as we can't directly compute the proximal operator of a composition in general.
-  Special cases are handled through the special combination registry.
-"""
-function combine_oracles(expr::Composition, ::Type{ProximalOracle})
-    # In general, we can't directly compute the proximal operator of a composition
-    # Special cases are handled through the special combination registry
-    return nothing
 end
 
 # === MAXIMUM === #
 
 """
-    combine_oracles(expr::Maximum, ::Type{EvaluationOracle})
+    combine_oracles(expr::Maximum, oracle)
 
-Combine evaluation oracles for a maximum expression.
-The result is the maximum of evaluating each term.
+Combine oracles for a maximum expression.
+The result depends on the oracle type.
 
 # Arguments
 - `expr::Maximum`: The maximum expression
-- `::Type{EvaluationOracle}`: The evaluation oracle type
+- `oracle`: The oracle instance or type
 
 # Returns
-- A function implementing the combined evaluation oracle if possible, otherwise nothing
+- A function implementing the combined oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Maximum, ::Type{EvaluationOracle})
-    if isempty(expr.terms)
-        return nothing
-    end
+function combine_oracles(expr::Maximum, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
 
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, EvaluationOracle)
-        if oracle === nothing
+    # Different handling based on oracle type
+    if base_type == EvaluationOracle
+        if isempty(expr.terms)
             return nothing
         end
-        push!(oracles, oracle)
+
+        oracles = []
+        for term in expr.terms
+            term_oracle = get_oracle_for_expression(term, oracle)
+            if term_oracle === nothing
+                return nothing
+            end
+            push!(oracles, term_oracle)
+        end
+
+        return function (x)
+            values = [oracle(x) for oracle in oracles]
+            return maximum(values)
+        end
+    else
+        # For other oracle types (like derivatives), the combination is more complex
+        # Special cases should be handled through the special combination registry
+        return nothing
     end
-
-    return function (x)
-        values = [oracle(x) for oracle in oracles]
-        return maximum(values)
-    end
-end
-
-"""
-    combine_oracles(expr::Maximum, ::Type{DerivativeOracle})
-
-Combine derivative oracles for a maximum expression.
-The subdifferential of a maximum of functions is complex (involving the convex hull
-of gradients at points where multiple terms achieve the maximum).
-
-# Arguments
-- `expr::Maximum`: The maximum expression
-- `::Type{DerivativeOracle}`: The derivative oracle type
-
-# Returns
-- Nothing in the general case. Special cases can be handled through the special combination registry.
-"""
-function combine_oracles(expr::Maximum, ::Type{DerivativeOracle})
-    # The subdifferential of max(f₁(x), f₂(x), ...) is complex and depends on which functions
-    # attain the maximum at the point x.
-    # Special cases should be handled through the special combination registry.
-    return nothing
 end
 
 # === MINIMUM === #
 
 """
-    combine_oracles(expr::Minimum, ::Type{EvaluationOracle})
+    combine_oracles(expr::Minimum, oracle)
 
-Combine evaluation oracles for a minimum expression.
-The result is the minimum of evaluating each term.
+Combine oracles for a minimum expression.
+The result depends on the oracle type.
 
 # Arguments
 - `expr::Minimum`: The minimum expression
-- `::Type{EvaluationOracle}`: The evaluation oracle type
+- `oracle`: The oracle instance or type
 
 # Returns
-- A function implementing the combined evaluation oracle if possible, otherwise nothing
+- A function implementing the combined oracle if possible, otherwise nothing
 """
-function combine_oracles(expr::Minimum, ::Type{EvaluationOracle})
-    if isempty(expr.terms)
-        return nothing
-    end
+function combine_oracles(expr::Minimum, oracle)
+    # Extract the base oracle type for consistent handling
+    base_type = extract_oracle_type(oracle)
 
-    oracles = []
-    for term in expr.terms
-        oracle = get_oracle_for_expression(term, EvaluationOracle)
-        if oracle === nothing
+    # Different handling based on oracle type
+    if base_type == EvaluationOracle
+        if isempty(expr.terms)
             return nothing
         end
-        push!(oracles, oracle)
+
+        oracles = []
+        for term in expr.terms
+            term_oracle = get_oracle_for_expression(term, oracle)
+            if term_oracle === nothing
+                return nothing
+            end
+            push!(oracles, term_oracle)
+        end
+
+        return function (x)
+            values = [oracle(x) for oracle in oracles]
+            return minimum(values)
+        end
+    else
+        # For other oracle types (like derivatives), the combination is more complex
+        # Special cases should be handled through the special combination registry
+        return nothing
     end
-
-    return function (x)
-        values = [oracle(x) for oracle in oracles]
-        return minimum(values)
-    end
-end
-
-"""
-    combine_oracles(expr::Minimum, ::Type{DerivativeOracle})
-
-Combine derivative oracles for a minimum expression.
-The subdifferential of a minimum of functions is complex (involving the convex hull
-of gradients at points where multiple terms achieve the minimum).
-
-# Arguments
-- `expr::Minimum`: The minimum expression
-- `::Type{DerivativeOracle}`: The derivative oracle type
-
-# Returns
-- Nothing in the general case. Special cases can be handled through the special combination registry.
-"""
-function combine_oracles(expr::Minimum, ::Type{DerivativeOracle})
-    # The subdifferential of min(f₁(x), f₂(x), ...) is complex and depends on which functions
-    # attain the minimum at the point x.
-    # Special cases should be handled through the special combination registry.
-    return nothing
 end
