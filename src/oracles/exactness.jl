@@ -1,29 +1,22 @@
 """
-Exactness type system for oracles.
-These types describe the level of exactness (precision) of oracle computations.
+Exactness types for oracles.
+These types describe the level of precision of oracle computations.
 """
 
+"""
+Represents the exactness level of an oracle computation.
+"""
 abstract type Exactness end
 
 """
-    Exact <: Exactness
-
-Represents oracles that provide exact (analytically precise) computations.
+Exact computations with no error.
 """
 struct Exact <: Exactness end
 
 """
-Error specification base type for inexact oracles.
+Inexact computations with absolute error bounds.
 """
-abstract type ErrorSpec end
-
-"""
-    AbsoluteError <: ErrorSpec
-
-Represents an absolute error bound.
-Error is bounded by a fixed value: |f(x) - f̂(x)| ≤ ε
-"""
-struct AbsoluteError <: ErrorSpec
+struct AbsoluteError <: Exactness
     ε::Float64
 
     function AbsoluteError(ε::Float64)
@@ -33,12 +26,9 @@ struct AbsoluteError <: ErrorSpec
 end
 
 """
-    RelativeError <: ErrorSpec
-
-Represents a relative error bound.
-Error is bounded relative to true value: |f(x) - f̂(x)| ≤ ε⋅|f(x)|
+Inexact computations with relative error bounds.
 """
-struct RelativeError <: ErrorSpec
+struct RelativeError <: Exactness
     ε::Float64
 
     function RelativeError(ε::Float64)
@@ -48,30 +38,19 @@ struct RelativeError <: ErrorSpec
 end
 
 """
-    Inexact{E<:ErrorSpec} <: Exactness
+    error_bound(e::Exactness)
 
-Represents oracles with inexact (approximate) computations with error bounds.
+Get the error bound for an exactness specification.
 """
-struct Inexact{E<:ErrorSpec} <: Exactness
-    error_spec::E
-
-    # Convenience constructor for absolute error
-    Inexact(ε::Float64) = new{AbsoluteError}(AbsoluteError(ε))
-
-    # Generic constructor
-    Inexact(error_spec::E) where {E<:ErrorSpec} = new{E}(error_spec)
-end
-
-# Convenient functions for checking exactness
-is_exact(::Exact) = true
-is_exact(::Inexact) = false
-
-# Get error bound (may not be meaningful for Exact types)
 error_bound(::Exact) = 0.0
-error_bound(inexact::Inexact{AbsoluteError}) = inexact.error_spec.ε
-error_bound(inexact::Inexact{RelativeError}) = inexact.error_spec.ε
+error_bound(e::AbsoluteError) = e.ε
+error_bound(e::RelativeError) = e.ε
 
-# Check if error is relative
+"""
+    is_relative_error(e::Exactness)
+
+Check if the error is relative.
+"""
 is_relative_error(::Exact) = false
-is_relative_error(::Inexact{AbsoluteError}) = false
-is_relative_error(::Inexact{RelativeError}) = true
+is_relative_error(::AbsoluteError) = false
+is_relative_error(::RelativeError) = true
