@@ -1,234 +1,98 @@
+
+# ===== Oracle Registry =====
+
+# Main registry: maps (function_symbol, oracle_type) to oracle instances
+const oracle_registry = Dict{Tuple{Symbol,DataType},Oracle}()
+
+# Special combinations registry for operations that can't follow standard rules
+const special_combination_registry =
+    Dict{Tuple{DataType,Vector{Symbol},DataType},Function}()
+
 """
-Registry system for oracles. This allows associating oracle implementations with function symbols.
+    register_oracle!(func::Symbol, oracle::Oracle)
+
+Register an oracle for a function.
 """
-
-# Main registry: maps function symbols to a dictionary of oracle types and their implementations
-const oracle_registry = Dict{Symbol,Dict{DataType,Function}}()
-
-"""
-    register_oracle!(func_symbol::Symbol, oracle, implementation::Function)
-
-Register an oracle implementation for a function.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-- `oracle`: An instance or type of the oracle being registered
-- `implementation::Function`: The function implementing the oracle
-
-# Returns
-- The registered implementation function
-
-# Example
-```julia
-register_oracle!(:f, EvaluationOracle(), x -> x^2 + 1)
-```
-"""
-function register_oracle!(func_symbol::Symbol, oracle, implementation::Function)
-    # Handle both oracle instances and types
-    if oracle isa Oracle
-        # It's an oracle instance
-        oracle_type = typeof(oracle)
-        exactness_info = oracle.exactness
-    else
-        # It's an oracle type
-        oracle_type = oracle
-        exactness_info = nothing
-    end
-
-    if !haskey(oracle_registry, func_symbol)
-        oracle_registry[func_symbol] = Dict{DataType,Function}()
-    end
-
-    # Store the implementation with the specific oracle type
-    oracle_registry[func_symbol][oracle_type] = implementation
-
-    # Also register metadata if exactness or other properties are specified
-    if exactness_info isa Inexact
-        # Extract the base type for metadata registration
-        base_type = extract_oracle_type(oracle_type)
-
-        # Create metadata with the exactness information
-        metadata = OracleMetadata(exactness = exactness_info)
-
-        # Register the metadata
-        register_oracle_metadata!(func_symbol, base_type, metadata)
-    end
-
-    return implementation
+function register_oracle!(func::Symbol, oracle::Oracle)
+    oracle_type = typeof(oracle)
+    oracle_registry[(func, oracle_type)] = oracle
+    return oracle
 end
 
 """
-    register_oracle_type!(func_symbol::Symbol, oracle)
+    get_oracle(func::Symbol, oracle_type::DataType)
 
-Register just the oracle type for a function, without an implementation.
-This is useful for indicating that a function supports a type of oracle,
-even if the implementation isn't provided directly.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-- `oracle`: An instance or type of the oracle being registered
-
-# Returns
-- Nothing
+Get an oracle for a function.
 """
-function register_oracle_type!(func_symbol::Symbol, oracle)
-    # Handle both oracle instances and types
-    if oracle isa Oracle
-        # It's an oracle instance
-        oracle_type = typeof(oracle)
-        exactness_info = oracle.exactness
-    else
-        # It's an oracle type
-        oracle_type = oracle
-        exactness_info = nothing
-    end
-
-    if !haskey(oracle_registry, func_symbol)
-        oracle_registry[func_symbol] = Dict{DataType,Function}()
-    end
-
-    # Register metadata if exactness or other properties are specified
-    if exactness_info isa Inexact
-        # Extract the base type for metadata registration
-        base_type = extract_oracle_type(oracle_type)
-
-        # Create metadata with the exactness information
-        metadata = OracleMetadata(exactness = exactness_info)
-
-        # Register the metadata
-        register_oracle_metadata!(func_symbol, base_type, metadata)
-    end
-
-    return nothing
+function get_oracle(func::Symbol, oracle_type::DataType)
+    return get(oracle_registry, (func, oracle_type), nothing)
 end
 
 """
-    get_oracle(func_symbol::Symbol, oracle)
+    has_oracle(func::Symbol, oracle_type::DataType)
 
-Get the oracle implementation for a function.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-- `oracle`: An instance or type of the oracle to retrieve
-
-# Returns
-- The oracle implementation function if it exists, otherwise nothing
+Check if a function has an oracle of the specified type.
 """
-function get_oracle(func_symbol::Symbol, oracle)
-    # Handle both oracle instances and types
-    if oracle isa Oracle
-        # It's an oracle instance
-        oracle_type = typeof(oracle)
-    else
-        # It's an oracle type
-        oracle_type = oracle
-    end
-
-    if !haskey(oracle_registry, func_symbol) ||
-       !haskey(oracle_registry[func_symbol], oracle_type)
-        # Try to find a compatible oracle (e.g., an exact oracle can be used for an inexact request)
-        return find_compatible_oracle(func_symbol, oracle)
-    end
-
-    return oracle_registry[func_symbol][oracle_type]
+function has_oracle(func::Symbol, oracle_type::DataType)
+    return haskey(oracle_registry, (func, oracle_type))
 end
 
 """
-    find_compatible_oracle(func_symbol::Symbol, oracle)
+    clear_oracles!(func::Symbol)
 
-Find a compatible oracle implementation for a function.
-This allows for substituting an exact oracle when an inexact one is requested.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-- `oracle`: An instance or type of the requested oracle
-
-# Returns
-- A compatible oracle implementation function if it exists, otherwise nothing
+Clear all oracles for a function.
 """
-function find_compatible_oracle(func_symbol::Symbol, oracle)
-    if !haskey(oracle_registry, func_symbol)
-        return nothing
-    end
-
-    # Get oracle type and exactness information
-    if oracle isa Oracle
-        # It's an oracle instance
-        oracle_type = typeof(oracle)
-        exactness_info = oracle.exactness
-    else
-        # It's an oracle type
-        oracle_type = oracle
-        exactness_info = nothing
-    end
-
-    # Get the base oracle type without exactness parameter
-    base_type = extract_oracle_type(oracle_type)
-
-    # If an inexact oracle is requested, check if an exact one exists
-    if exactness_info isa Inexact
-        # Check for an exact version of the same oracle type
-        for key in keys(oracle_registry[func_symbol])
-            key_base = extract_oracle_type(key)
-            if key_base == base_type && exactness_type(key) <: Exact
-                return oracle_registry[func_symbol][key]
-            end
+function clear_oracles!(func::Symbol)
+    for key in collect(keys(oracle_registry))
+        if key[1] == func
+            delete!(oracle_registry, key)
         end
     end
-
-    # No compatible oracle found
     return nothing
 end
 
+# ===== Special Combinations =====
+
 """
-    has_oracle(func_symbol::Symbol, oracle)
+    register_special_combination(op_type::DataType, funcs::Vector{Symbol},
+                              oracle_type::DataType, handler::Function)
 
-Check if a function has a registered oracle.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-- `oracle`: An instance or type of the oracle to check for
-
-# Returns
-- `true` if the function has a matching oracle registered, `false` otherwise
+Register a special handler for combining oracles in specific expressions.
 """
-function has_oracle(func_symbol::Symbol, oracle)
-    # Handle both oracle instances and types
-    if oracle isa Oracle
-        # It's an oracle instance
-        oracle_type = typeof(oracle)
-    else
-        # It's an oracle type
-        oracle_type = oracle
-    end
-
-    if !haskey(oracle_registry, func_symbol) ||
-       !haskey(oracle_registry[func_symbol], oracle_type)
-        # Check if a compatible oracle exists
-        return find_compatible_oracle(func_symbol, oracle) !== nothing
-    end
-
-    return true
+function register_special_combination(
+    op_type::DataType,
+    funcs::Vector{Symbol},
+    oracle_type::DataType,
+    handler::Function,
+)
+    special_combination_registry[(op_type, funcs, oracle_type)] = handler
+    return handler
 end
 
 """
-    clear_oracles!(func_symbol::Symbol)
+    get_special_combination(op_type::DataType, funcs::Vector{Symbol},
+                         oracle_type::DataType)
 
-Clear all registered oracles for a function.
-
-# Arguments
-- `func_symbol::Symbol`: The symbol of the function
-
-# Returns
-- Nothing
+Get a special combination handler if one exists.
 """
-function clear_oracles!(func_symbol::Symbol)
-    if haskey(oracle_registry, func_symbol)
-        delete!(oracle_registry, func_symbol)
-    end
+function get_special_combination(
+    op_type::DataType,
+    funcs::Vector{Symbol},
+    oracle_type::DataType,
+)
+    return get(special_combination_registry, (op_type, funcs, oracle_type), nothing)
+end
 
-    # Also clear any metadata
-    clear_all_oracle_metadata!(func_symbol)
+"""
+    has_special_combination(op_type::DataType, funcs::Vector{Symbol},
+                         oracle_type::DataType)
 
-    return nothing
+Check if a special combination handler exists.
+"""
+function has_special_combination(
+    op_type::DataType,
+    funcs::Vector{Symbol},
+    oracle_type::DataType,
+)
+    return haskey(special_combination_registry, (op_type, funcs, oracle_type))
 end
