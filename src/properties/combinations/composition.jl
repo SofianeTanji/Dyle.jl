@@ -3,7 +3,7 @@
 function combine_properties_composition(p1::Convex, p2::Convex)
     return nothing
 end
-n
+
 function combine_properties_composition(p1::Convex, p2::StronglyConvex)
     return nothing
 end
