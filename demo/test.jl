@@ -1,6 +1,7 @@
 using Dyle
 using Dyle.Language
 using Dyle.Properties
+using Dyle.Oracles
 using Test
 
 Rns = Rn(:n)
@@ -109,3 +110,120 @@ println("MonotonicallyIncreasing Convex ∘ Convex -> Properties: ", comp7_props
 @test any(p isa Convex for p in comp7_props)
 
 println("\nComposition tests completed.")
+
+println("==== Testing Oracle Module ====")
+
+# Define spaces and variables
+@variable x::R()
+@variable y::R()
+
+# Define functions
+@func f g h
+
+# Register oracles for functions
+println("\n1. Registering oracles for functions")
+@oracle f EvaluationOracle(x -> x^2)
+@oracle f DerivativeOracle(x -> 2 * x)
+println("  Registered oracles for f(x) = x^2")
+
+@oracle g EvaluationOracle(x -> sin(x))
+@oracle g DerivativeOracle(x -> cos(x))
+println("  Registered oracles for g(x) = sin(x)")
+
+@oracle h EvaluationOracle(x -> exp(x))
+@oracle h DerivativeOracle(x -> exp(x))
+println("  Registered oracles for h(x) = exp(x)")
+
+# Test individual oracles
+println("\n2. Testing individual oracles")
+f_eval = get_oracle(:f, EvaluationOracle)
+f_deriv = get_oracle(:f, DerivativeOracle)
+
+test_point = 2.0
+println("  f($test_point) = $(f_eval(test_point))")
+println("  f'($test_point) = $(f_deriv(test_point))")
+
+@test f_eval(test_point) ≈ test_point^2
+@test f_deriv(test_point) ≈ 2 * test_point
+
+# Create composite expressions
+println("\n3. Testing oracle combinations for composite expressions")
+
+# Addition
+println("\n3.1 Addition: f(x) + g(x)")
+expr_add = f(x) + g(x)   # x^2 + sin(x)
+expr_add_eval = get_oracle_for_expression(expr_add, EvaluationOracle)
+expr_add_deriv = get_oracle_for_expression(expr_add, DerivativeOracle)
+
+if expr_add_eval !== nothing && expr_add_deriv !== nothing
+    println("  (f + g)($test_point) = $(expr_add_eval(test_point))")
+    println("  (f + g)'($test_point) = $(expr_add_deriv(test_point))")
+
+    @test expr_add_eval(test_point) ≈
+          f_eval(test_point) + get_oracle(:g, EvaluationOracle)(test_point)
+    @test expr_add_deriv(test_point) ≈
+          f_deriv(test_point) + get_oracle(:g, DerivativeOracle)(test_point)
+    println("  ✓ Addition oracles combined correctly")
+else
+    println("  ✗ Failed to combine addition oracles")
+end
+
+# Composition
+println("\n3.2 Composition: f(g(x))")
+expr_comp = f(g(x))       # (sin(x))^2
+
+expr_comp_eval = get_oracle_for_expression(expr_comp, EvaluationOracle)
+expr_comp_deriv = get_oracle_for_expression(expr_comp, DerivativeOracle)
+
+if expr_comp_eval !== nothing && expr_comp_deriv !== nothing
+    println("  (f ∘ g)($test_point) = $(expr_comp_eval(test_point))")
+    println("  (f ∘ g)'($test_point) = $(expr_comp_deriv(test_point))")
+
+    g_x = get_oracle(:g, EvaluationOracle)(test_point)
+    expected_comp_eval = f_eval(g_x)
+    expected_comp_deriv = f_deriv(g_x) * get_oracle(:g, DerivativeOracle)(test_point)
+
+    @test expr_comp_eval(test_point) ≈ expected_comp_eval
+    @test expr_comp_deriv(test_point) ≈ expected_comp_deriv
+    println("  ✓ Composition oracles combined correctly")
+else
+    println("  ✗ Failed to combine composition oracles")
+end
+
+# Testing proxy and special combinations
+println("\n4. Testing proximal oracle and special combinations")
+
+# Try a proximal oracle (which we haven't defined)
+has_proximal = get_oracle_for_expression(expr_add, ProximalOracle) !== nothing
+println("  Has proximal oracle for addition: $has_proximal")
+@test has_proximal == false
+
+# Register a simple special combination for demonstration
+println("\n5. Testing special combination registration")
+special_handler = expr -> x -> 42.0  # A dummy handler that always returns 42
+register_special_combination(Addition, [:f, :g], ProximalOracle, special_handler)
+
+# Check if the special combination is registered
+has_special = has_special_combination(Addition, [:f, :g], ProximalOracle)
+println("  Special combination registered: $has_special")
+@test has_special == true
+
+# Try to get the special combination
+special_handler_retrieved = get_special_combination(Addition, [:f, :g], ProximalOracle)
+println("  Special handler is callable: $(special_handler_retrieved !== nothing)")
+@test special_handler_retrieved !== nothing
+
+# Create the specific expression that should match our special case
+special_expr = f(x) + g(x)
+special_oracle = get_oracle_for_expression(special_expr, ProximalOracle)
+
+if special_oracle !== nothing
+    result = special_oracle(test_point)
+    println("  Special oracle result: $result")
+    @test result == 42.0
+    println("  ✓ Special combination works correctly")
+else
+    println("  ✗ Failed to get special oracle")
+end
+
+println("\n==== Oracle Module Tests Completed ====")
