@@ -1,4 +1,4 @@
-import Base: abs, -, +
+import Base: abs, -, +, ==, hash
 
 abstract type Property end
 
@@ -110,3 +110,35 @@ struct Quadratic <: Property
         isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
     )
 end
+
+
+# Define equality for Convex: all Convex instances are equivalent
+==(p1::Convex, p2::Convex) = true
+hash(p::Convex, h::UInt) = hash(:Convex, h)
+
+# For MonotonicallyIncreasing, assume all instances are equivalent:
+==(p1::MonotonicallyIncreasing, p2::MonotonicallyIncreasing) = true
+hash(p::MonotonicallyIncreasing, h::UInt) = hash(:MonotonicallyIncreasing, h)
+
+# For parameterized types like StronglyConvex, compare their μ fields
+==(p1::StronglyConvex, p2::StronglyConvex) = p1.μ == p2.μ
+hash(p::StronglyConvex, h::UInt) = hash(p.μ, h)
+
+==(p1::HypoConvex, p2::HypoConvex) = p1.ρ == p2.ρ
+hash(p::HypoConvex, h::UInt) = hash(p.ρ, h)
+
+==(p1::Smooth, p2::Smooth) = p1.L == p2.L
+hash(p::Smooth, h::UInt) = hash(p.L, h)
+
+==(p1::Lipschitz, p2::Lipschitz) = p1.M == p2.M
+hash(p::Lipschitz, h::UInt) = hash(p.M, h)
+
+# For Linear and Quadratic, you can compare each field:
+==(p1::Linear, p2::Linear) = p1.λₘᵢₙ == p2.λₘᵢₙ && p1.λₘₐₓ == p2.λₘₐₓ
+hash(p::Linear, h::UInt) = hash((p.λₘᵢₙ, p.λₘₐₓ), h)
+
+==(p1::Quadratic, p2::Quadratic) = p1.λₘᵢₙ == p2.λₘᵢₙ && p1.λₘₐₓ == p2.λₘₐₓ
+hash(p::Quadratic, h::UInt) = hash((p.λₘᵢₙ, p.λₘₐₓ), h)
+
+==(i1::Interval, i2::Interval) = i1.lower == i2.lower && i1.upper == i2.upper
+hash(i::Interval, h::UInt) = hash((i.lower, i.upper), h)

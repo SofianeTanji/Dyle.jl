@@ -380,3 +380,63 @@ end
 function show(io::IO, f::FunctionType)
     print(io, f.name, ": ", f.domain, " → ", f.codomain)
 end
+
+
+
+==(a::Literal, b::Literal) = a.value == b.value && a.space == b.space
+==(a::Variable, b::Variable) = a.name == b.name && a.space == b.space
+
+==(a::FunctionCall, b::FunctionCall) =
+    a.name == b.name &&
+    a.space == b.space &&
+    length(a.args) == length(b.args) &&
+    all(==(x, y) for (x, y) in zip(a.args, b.args))
+
+==(a::Addition, b::Addition) =
+    a.space == b.space &&
+    length(a.terms) == length(b.terms) &&
+    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+
+==(a::Subtraction, b::Subtraction) =
+    a.space == b.space &&
+    length(a.terms) == length(b.terms) &&
+    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+
+==(a::Composition, b::Composition) =
+    a.space == b.space && a.outer == b.outer && a.inner == b.inner
+
+==(a::Maximum, b::Maximum) =
+    a.space == b.space &&
+    length(a.terms) == length(b.terms) &&
+    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+
+==(a::Minimum, b::Minimum) =
+    a.space == b.space &&
+    length(a.terms) == length(b.terms) &&
+    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+
+# fallback
+==(a::Expression, b::Expression) = false
+
+function hash(l::Literal, h::UInt)
+    hash((l.value, l.space), h)
+end
+function hash(v::Variable, h::UInt)
+    hash((v.name, v.space), h)
+end
+function hash(fc::FunctionCall, h::UInt)
+    hash((fc.name, fc.space, fc.args), h)
+end
+function hash(ad::Addition, h::UInt)hash((:Addition, ad.space, ad.terms), h) end
+function hash(sb::Subtraction, h::UInt)
+    hash((:Subtraction, sb.space, sb.terms), h)
+end
+function hash(co::Composition, h::UInt)
+    hash((:Composition, co.space, co.outer, co.inner), h)
+end
+function hash(mx::Maximum, h::UInt)
+    hash((:Maximum, mx.space, mx.terms), h)
+end
+function hash(mn::Minimum, h::UInt)
+    hash((:Minimum, mn.space, mn.terms), h)
+end

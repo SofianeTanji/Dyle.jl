@@ -2,6 +2,7 @@ using Dyle
 using Dyle.Language
 using Dyle.Properties
 using Dyle.Oracles
+using Dyle.Reformulations
 using Test
 
 Rns = Rn(:n)
@@ -37,6 +38,8 @@ h_props = get_properties(:h)
 expr1_props = infer_properties(expr1)
 expr2_props = infer_properties(expr2)
 expr3_props = infer_properties(expr3)
+
+reforms = generate_reformulations(f(x) + g(v) + f(x))
 
 # Test quadratic properties
 @func quad1(R(), R())
