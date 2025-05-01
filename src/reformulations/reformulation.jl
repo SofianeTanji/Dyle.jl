@@ -5,7 +5,6 @@ import Base: ==, hash
 using ..Language
 using ..Properties
 using ..Oracles
-using ..Templates
 
 include("strategies/structure_loss.jl")
 
