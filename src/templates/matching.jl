@@ -5,6 +5,9 @@ Template matching system for Dyle.jl.
 This module provides functions to match expressions against templates.
 """
 
+# The adapters will be available in scope when this is included in the Templates module
+# Because we first include adapters.jl which includes the adapter modules
+
 """
     extract_functions(expr::Expression) -> Vector{Symbol}
 
@@ -222,6 +225,7 @@ end
     meets_function_requirements(expr_func::Symbol, template_func::Symbol, template::OptimizationTemplate) -> Bool
 
 Check if an expression function meets the requirements specified for a template function.
+Uses the PropertyAdapter and OracleAdapter to check requirements.
 
 # Arguments
 - `expr_func::Symbol`: The function symbol in the expression
@@ -250,18 +254,17 @@ function meets_function_requirements(
         return true
     end
 
-    # Check required properties
-    for prop_type in requirements.required_properties
-        if !has_property(expr_func, prop_type)
-            return false
-        end
+    # Check required properties using the PropertyAdapter
+    if !PropertyAdapter.meets_property_requirements(
+        expr_func,
+        requirements.required_properties,
+    )
+        return false
     end
 
-    # Check required oracles
-    for oracle_type in requirements.required_oracles
-        if !has_oracle(expr_func, oracle_type)
-            return false
-        end
+    # Check required oracles using the OracleAdapter
+    if !OracleAdapter.meets_oracle_requirements(expr_func, requirements.required_oracles)
+        return false
     end
 
     # All requirements met
@@ -368,4 +371,79 @@ function get_function_mapping(expr::Expression, template_name::Symbol)
 
     template = optimization_templates[template_name]
     return create_function_mapping(expr, template)
+end
+
+"""
+    get_parameter_values(expr::Expression, template_name::Symbol) -> Dict{Symbol, Dict{Symbol, Any}}
+
+Get parameter values for all functions in a template mapping.
+
+# Arguments
+- `expr::Expression`: The expression to analyze
+- `template_name::Symbol`: The name of the template to match against
+
+# Returns
+- Dictionary mapping template function names to their parameter dictionaries,
+  or `nothing` if there's no valid mapping
+
+# Examples
+```julia
+@variable x::R()
+@func f
+@property f StronglyConvex(1.0) Smooth(2.0)
+
+params = get_parameter_values(f(x), :smooth_strongly_convex_min)
+# Returns e.g. Dict(:f => Dict(:μ => 1.0, :L => 2.0))
+```
+"""
+function get_parameter_values(expr::Expression, template_name::Symbol)
+    # Get the function mapping
+    mapping = get_function_mapping(expr, template_name)
+    if mapping === nothing
+        return nothing
+    end
+
+    # Get the template
+    template = optimization_templates[template_name]
+
+    # Build the parameter dictionary
+    result = Dict{Symbol,Dict{Symbol,Any}}()
+
+    for req in template.function_requirements
+        template_func = req.name
+        expr_func = mapping[template_func]
+
+        # Initialize parameter dictionary for this function
+        func_params = Dict{Symbol,Any}()
+
+        # Get parameters from properties
+        for prop_type in req.required_properties
+            # Only handle parameterized properties
+            if prop_type == StronglyConvex
+                # Get μ parameter from StronglyConvex property
+                μ = PropertyAdapter.get_parameter_value(expr_func, StronglyConvex, :μ)
+                if μ !== nothing
+                    func_params[:μ] = μ
+                end
+            elseif prop_type == Smooth
+                # Get L parameter from Smooth property
+                L = PropertyAdapter.get_parameter_value(expr_func, Smooth, :L)
+                if L !== nothing
+                    func_params[:L] = L
+                end
+            elseif prop_type == Lipschitz
+                # Get M parameter from Lipschitz property
+                M = PropertyAdapter.get_parameter_value(expr_func, Lipschitz, :M)
+                if M !== nothing
+                    func_params[:M] = M
+                end
+            end
+            # Add more property types as needed
+        end
+
+        # Store the parameters for this function
+        result[template_func] = func_params
+    end
+
+    return result
 end

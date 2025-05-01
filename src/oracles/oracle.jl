@@ -13,7 +13,9 @@ include("exactness.jl")
 include("cost_models.jl")
 include("metadata.jl")
 include("types.jl")
+include("interfaces.jl")
 include("registry.jl")
+include("providers.jl")
 include("combinations.jl")
 include("specials.jl")
 include("macros.jl")
@@ -32,7 +34,21 @@ export constant_cost, linear_cost, quadratic_cost, cubic_cost
 # Oracle types
 export Oracle, EvaluationOracle, DerivativeOracle, ProximalOracle
 
-# Registry functions
+# Interface exports
+export IOracleProvider,
+    register_oracle,
+    get_oracle,
+    has_oracle,
+    clear_oracles,
+    get_oracle_for_expression,
+    register_special_combination,
+    has_special_combination,
+    get_special_combination
+
+# Provider implementations
+export DefaultOracleProvider
+
+# Registry functions (for backward compatibility)
 export register_oracle!, get_oracle, has_oracle, clear_oracles!
 
 # Combination functions
