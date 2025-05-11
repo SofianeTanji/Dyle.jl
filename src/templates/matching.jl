@@ -1,7 +1,7 @@
 """
     Templates.matching
 
-Template matching system for Dyle.jl.
+Template matching system for Argo.jl.
 This module provides functions to match expressions against templates.
 """
 

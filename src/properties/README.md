@@ -1,6 +1,6 @@
 # Properties Module
 
-This directory implements a mathematical property algebra system for Dyle.jl. It provides mechanisms to associate properties with functions and infer properties of composite expressions.
+This directory implements a mathematical property algebra system for Argo.jl. It provides mechanisms to associate properties with functions and infer properties of composite expressions.
 
 ## Components
 
@@ -48,7 +48,7 @@ This directory implements a mathematical property algebra system for Dyle.jl. It
 ## Usage Example
 
 ```julia
-using Dyle.Properties
+using Argo.Properties
 
 # Declare functions with properties
 @func f(R(), R())

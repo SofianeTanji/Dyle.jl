@@ -1,7 +1,7 @@
 """
     Templates.registry
 
-Registry system for templates and methods in Dyle.jl.
+Registry system for templates and methods in Argo.jl.
 """
 
 # Dictionary to store all registered templates

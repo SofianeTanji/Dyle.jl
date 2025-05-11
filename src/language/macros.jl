@@ -98,7 +98,7 @@ end
 """
     @expression expr
 
-Parse a Julia expression into the Dyle expression type system.
+Parse a Julia expression into the Argo expression type system.
 """
 macro expression(expr)
     return :(parser($(QuoteNode(expr))))

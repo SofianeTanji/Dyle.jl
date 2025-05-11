@@ -1,6 +1,6 @@
 # Oracle Module
 
-This directory implements the computational interface for mathematical functions in Dyle.jl. It provides a flexible system for registering, combining, and using computational capabilities ("oracles") of functions.
+This directory implements the computational interface for mathematical functions in Argo.jl. It provides a flexible system for registering, combining, and using computational capabilities ("oracles") of functions.
 
 ## Components
 
@@ -44,7 +44,7 @@ This directory implements the computational interface for mathematical functions
 ## Usage Example
 
 ```julia
-using Dyle.Oracles
+using Argo.Oracles
 
 # Define functions with oracles
 @func f(R(), R())

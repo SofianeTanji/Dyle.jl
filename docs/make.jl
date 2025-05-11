@@ -1,7 +1,7 @@
-using Dyle
+using Argo
 using Documenter
 
-DocMeta.setdocmeta!(Dyle, :DocTestSetup, :(using Dyle); recursive = true)
+DocMeta.setdocmeta!(Argo, :DocTestSetup, :(using Argo); recursive = true)
 
 const page_rename = Dict("developer.md" => "Developer docs") # Without the numbers
 const numbered_pages = [
@@ -10,12 +10,12 @@ const numbered_pages = [
 ]
 
 makedocs(;
-    modules = [Dyle],
+    modules = [Argo],
     authors = "Sofiane <sofiane.tanji@uclouvain.be>",
-    repo = "https://github.com/SofianeTanji/Dyle.jl/blob/{commit}{path}#{line}",
-    sitename = "Dyle.jl",
-    format = Documenter.HTML(; canonical = "https://SofianeTanji.github.io/Dyle.jl"),
+    repo = "https://github.com/SofianeTanji/Argo.jl/blob/{commit}{path}#{line}",
+    sitename = "Argo.jl",
+    format = Documenter.HTML(; canonical = "https://SofianeTanji.github.io/Argo.jl"),
     pages = ["index.md"; numbered_pages],
 )
 
-deploydocs(; repo = "github.com/SofianeTanji/Dyle.jl")
+deploydocs(; repo = "github.com/SofianeTanji/Argo.jl")

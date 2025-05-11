@@ -1,4 +1,4 @@
-module Dyle
+module Argo
 
 include("language/language.jl")
 include("properties/property.jl")

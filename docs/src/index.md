@@ -1,10 +1,10 @@
 ```@meta
-CurrentModule = Dyle
+CurrentModule = Argo
 ```
 
-# Dyle
+# Argo
 
-Documentation for [Dyle](https://github.com/SofianeTanji/Dyle.jl).
+Documentation for [Argo](https://github.com/SofianeTanji/Argo.jl).
 
 ## Contributors
 
