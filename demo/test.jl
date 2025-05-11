@@ -8,26 +8,30 @@ using Test
 Rns = Rn(:n)
 
 @variable x::R()
-@variable y::R()
 @variable v::Rns
 
 @func f(R(), R())
 @func g(Rns, R())
+
+# Register properties for functions
+@property f StronglyConvex(1.0) Smooth(2.0)
+@property g Convex() Lipschitz(5.0)
+
+reforms = generate_reformulations(f(x) + g(v) + f(x))
+
+
 @func h(R(), R())
 @func linear_func(R(), R())
 @func linear_func2(R(), R())
+@property h Linear(1.0, 3.0)
+@property linear_func Linear(1.0, 2.0)
+@property linear_func2 Linear(0.5, 1.5)
+
 
 # Create expressions
 expr1 = f(x) + f(x)
 expr2 = g(v)
 expr3 = f(x) + g(v)
-
-# Register properties for functions
-@property f StronglyConvex(1.0) Smooth(2.0)
-@property g Convex() Lipschitz(5.0)
-@property h Linear(1.0, 3.0)
-@property linear_func Linear(1.0, 2.0)
-@property linear_func2 Linear(0.5, 1.5)
 
 # Test basic property retrieval
 f_props = get_properties(:f)
@@ -38,8 +42,6 @@ h_props = get_properties(:h)
 expr1_props = infer_properties(expr1)
 expr2_props = infer_properties(expr2)
 expr3_props = infer_properties(expr3)
-
-reforms = generate_reformulations(f(x) + g(v) + f(x))
 
 # Test quadratic properties
 @func quad1(R(), R())
