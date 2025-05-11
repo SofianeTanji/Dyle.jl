@@ -1,7 +1,7 @@
 """
     parser(expr)
 
-Parse a Julia expression into the Dyle expression type system.
+Parse a Julia expression into the Argo expression type system.
 
 This parser converts Julia syntax into the internal expression representation.
 It handles type annotations and space information within expressions.

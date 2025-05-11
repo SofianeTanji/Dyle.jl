@@ -1,5 +1,8 @@
 {
-  "projectName": "Dyle",
+  "projectName": "Argo",
   "projectOwner": "SofianeTanji",
-  "files": ["README.md", "docs/src/index.md"]
+  "files": [
+    "README.md",
+    "docs/src/index.md"
+  ]
 }

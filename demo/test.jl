@@ -1,8 +1,8 @@
-using Dyle
-using Dyle.Language
-using Dyle.Properties
-using Dyle.Oracles
-using Dyle.Reformulations
+using Argo
+using Argo.Language
+using Argo.Properties
+using Argo.Oracles
+using Argo.Reformulations
 using Test
 
 Rns = Rn(:n)

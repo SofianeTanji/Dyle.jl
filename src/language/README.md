@@ -1,6 +1,6 @@
 # Language Module
 
-This directory implements the core expression representation system for Dyle.jl. It provides the foundational types and operations for building, manipulating, and inspecting mathematical expressions.
+This directory implements the core expression representation system for Argo.jl. It provides the foundational types and operations for building, manipulating, and inspecting mathematical expressions.
 
 ## Components
 
@@ -23,7 +23,7 @@ This directory implements the core expression representation system for Dyle.jl.
 
 ### Parser (`parser.jl`)
 
-- Transforms Julia expressions into Dyle expression objects
+- Transforms Julia expressions into Argo expression objects
 - Handles type checking and space compatibility verification
 - Constructs the appropriate expression trees
 
@@ -31,12 +31,12 @@ This directory implements the core expression representation system for Dyle.jl.
 
 - `@variable`: Declares variables with optional space annotations
 - `@func`: Declares functions with domain/codomain specifications
-- `@expression`: Parses Julia expressions into Dyle expressions
+- `@expression`: Parses Julia expressions into Argo expressions
 
 ## Usage Example
 
 ```julia
-using Dyle.Language
+using Argo.Language
 
 # Define variables and functions
 @variable x::R()

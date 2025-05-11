@@ -1,7 +1,7 @@
 """
     Templates.macros
 
-Macro interface for template and method definition in Dyle.jl.
+Macro interface for template and method definition in Argo.jl.
 """
 
 """
