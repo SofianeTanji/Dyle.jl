@@ -427,7 +427,9 @@ end
 function hash(fc::FunctionCall, h::UInt)
     hash((fc.name, fc.space, fc.args), h)
 end
-function hash(ad::Addition, h::UInt)hash((:Addition, ad.space, ad.terms), h) end
+function hash(ad::Addition, h::UInt)
+    hash((:Addition, ad.space, ad.terms), h)
+end
 function hash(sb::Subtraction, h::UInt)
     hash((:Subtraction, sb.space, sb.terms), h)
 end

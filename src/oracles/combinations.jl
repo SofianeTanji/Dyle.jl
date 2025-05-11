@@ -164,7 +164,7 @@ function combine_oracles(expr::Subtraction, oracle_type::DataType)
         # Create combined oracle
         implementation = function (x)
             result = term_oracles[1](x)
-            for i = 2:length(term_oracles)
+            for i in eachindex(term_oracles)[2:end]
                 result -= term_oracles[i](x)
             end
             return result
