@@ -340,14 +340,24 @@ function show(io::IO, v::Variable)
 end
 
 function show(io::IO, f::FunctionCall)
-    print(io, f.name, "(", join(string.(f.args), ", "), ")")
+    print(io, "[", f.name, "(", join(string.(f.args), ", "), ")", "]")
 end
 
+# Custom printing for Expression types to show grouping with parentheses
 function show(io::IO, a::Addition)
     if isempty(a.terms)
         print(io, "0")
+    elseif length(a.terms) == 1
+        show(io, a.terms[1])
     else
-        print(io, join(string.(a.terms), " + "))
+        print(io, "(")
+        for (i, term) in enumerate(a.terms)
+            show(io, term)
+            if i < length(a.terms)
+                print(io, " + ")
+            end
+        end
+        print(io, ")")
     end
 end
 
@@ -355,22 +365,46 @@ function show(io::IO, s::Subtraction)
     if isempty(s.terms)
         print(io, "0")
     elseif length(s.terms) == 1
-        print(io, s.terms[1])
+        show(io, s.terms[1])
     else
-        print(io, string(s.terms[1]), " - ", join(string.(s.terms[2:end]), " - "))
+        print(io, "(")
+        show(io, s.terms[1])
+        for i = 2:length(s.terms)
+            print(io, " - ")
+            show(io, s.terms[i])
+        end
+        print(io, ")")
     end
 end
 
 function show(io::IO, c::Composition)
-    print(io, "(", c.outer, " ∘ ", c.inner, ")")
+    print(io, "(")
+    show(io, c.outer)
+    print(io, " ∘ ")
+    show(io, c.inner)
+    print(io, ")")
 end
 
 function show(io::IO, m::Maximum)
-    print(io, "max(", join(string.(m.terms), ", "), ")")
+    print(io, "max(")
+    for (i, term) in enumerate(m.terms)
+        show(io, term)
+        if i < length(m.terms)
+            print(io, ", ")
+        end
+    end
+    print(io, ")")
 end
 
 function show(io::IO, m::Minimum)
-    print(io, "min(", join(string.(m.terms), ", "), ")")
+    print(io, "min(")
+    for (i, term) in enumerate(m.terms)
+        show(io, term)
+        if i < length(m.terms)
+            print(io, ", ")
+        end
+    end
+    print(io, ")")
 end
 
 function show(io::IO, l::Literal)
