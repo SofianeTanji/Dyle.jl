@@ -163,6 +163,9 @@ function generate_reformulations(expr::Expression; max_iterations::Int = 3)
     all_reformulations = [create_reformulation(expr)]
     current_expressions = [expr]
 
+    # Keep track of expressions we've seen (for faster duplicate checking)
+    seen_expressions = Set{UInt}([hash(expr)])
+
     # Apply strategies iteratively
     for i = 1:max_iterations
         new_expressions = Expression[]
@@ -175,9 +178,13 @@ function generate_reformulations(expr::Expression; max_iterations::Int = 3)
 
                 # Add new reformulations to the collection
                 for reformulation in new_reformulations
-                    if !any(r -> r.expr == reformulation.expr, all_reformulations)
+                    expr_hash = hash(reformulation.expr)
+
+                    # Check if we've already seen this expression
+                    if !(expr_hash in seen_expressions)
                         push!(all_reformulations, reformulation)
                         push!(new_expressions, reformulation.expr)
+                        push!(seen_expressions, expr_hash)
                     end
                 end
             end

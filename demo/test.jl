@@ -1,3 +1,4 @@
+using Revise
 using Argo
 using Argo.Language
 using Argo.Properties
@@ -5,20 +6,33 @@ using Argo.Oracles
 using Argo.Reformulations
 using Test
 
-Rns = Rn(:n)
 
 @variable x::R()
-@variable v::Rns
-
 @func f(R(), R())
-@func g(Rns, R())
+@func g(R(), R())
+@func h(R(), R())
+@property f StronglyConvex(1.0) Smooth(2.0)
+@property g Convex() Lipschitz(5.0)
+@property h Convex()
+expr = f(x) + g(x) + h(x)
+reforms = generate_reformulations(expr)
+
+# Rns = Rn(:n)
+
+# @variable x::R()
+# @variable v::Rns
+
+# @func f(R(), R())
+# @func g(Rns, R())
+# @func h(R(), R())
 
 # Register properties for functions
 @property f StronglyConvex(1.0) Smooth(2.0)
 @property g Convex() Lipschitz(5.0)
-
+@property h Convex()
 reforms = generate_reformulations(f(x) + g(v) + f(x))
 
+apply_strategy(:rebalancing, f(x) + g(v) + h(x))
 
 @func h(R(), R())
 @func linear_func(R(), R())

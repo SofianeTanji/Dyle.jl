@@ -1,237 +1,96 @@
-"""
-    Expression rebalancing strategies.
-
-    This file provides strategies for rebalancing expressions, which involves
-    changing how terms are grouped without altering their mathematical meaning.
-"""
+using ..Reformulations: Reformulation, create_reformulation
+using ..Language: Expression, Addition, Composition
+using ..Reformulations: register_strategy, Strategy
 
 """
     RebalancingStrategy <: Strategy
 
-Strategy for rebalancing expressions by changing grouping of terms.
+Explore all associative regroupings for Addition and Composition.
 """
 struct RebalancingStrategy <: Strategy end
 
 """
-    (strategy::RebalancingStrategy)(expr::Expression) -> Vector{Reformulation}
+    (s::RebalancingStrategy)(expr::Expression) -> Vector{Reformulation}
 
-Apply rebalancing to an expression.
-
-# Arguments
-- `expr::Expression`: The expression to rebalance
-
-# Returns
-- `Vector{Reformulation}`: The rebalanced expressions
+Dispatch to addition or composition rebalancing.
 """
-function (strategy::RebalancingStrategy)(expr::Expression)
-    rebalanced = rebalance_expression(expr)
-    return [create_reformulation(r) for r in rebalanced]
+function (s::RebalancingStrategy)(expr::Expression)
+    if expr isa Addition
+        return rebalance_addition(expr)
+    elseif expr isa Composition
+        return rebalance_composition(expr)
+    else
+        return Reformulation[]
+    end
 end
 
-"""
-    rebalance_expression(expr::Expression) -> Vector{Expression}
+# ————— Helpers —————
 
-Generate alternative groupings of an expression.
-Default method returns an empty list for expression types that can't be rebalanced.
-
-# Arguments
-- `expr::Expression`: The expression to rebalance
-
-# Returns
-- `Vector{Expression}`: The rebalanced expressions
-"""
-function rebalance_expression(expr::Expression)
-    return Expression[]
-end
-
-"""
-    rebalance_expression(expr::Addition) -> Vector{Expression}
-
-Generate alternative groupings of an addition expression.
-
-# Arguments
-- `expr::Addition`: The addition expression to rebalance
-
-# Returns
-- `Vector{Expression}`: The rebalanced expressions
-"""
-function rebalance_expression(expr::Addition)
-    # If not enough terms, return empty list
-    if length(expr.terms) < 3
-        return Expression[]
-    end
-
-    # Flatten nested additions
-    flat_terms = flatten_addition_terms(expr)
-    if length(flat_terms) <= 2
-        return Expression[]
-    end
-
-    result = Expression[]
-
-    # Generate all binary regroupings
-    for i = 1:length(flat_terms)-1
-        for j = i+1:length(flat_terms)
-            # Group terms i through j
-            left_terms = flat_terms[i:j]
-
-            # Only proceed if we have at least one term on each side
-            if length(left_terms) >= 1 && length(flat_terms) - length(left_terms) >= 1
-                right_terms = vcat(flat_terms[1:i-1], flat_terms[j+1:end])
-
-                # Create the left group
-                left_expr = if length(left_terms) == 1
-                    left_terms[1]
-                else
-                    Addition(left_terms, expr.space)
-                end
-
-                # Create the right group
-                right_expr = if length(right_terms) == 1
-                    right_terms[1]
-                else
-                    Addition(right_terms, expr.space)
-                end
-
-                # Create the new expression
-                new_expr = Addition([left_expr, right_expr], expr.space)
-                push!(result, new_expr)
-            end
-        end
-    end
-
-    # Generate all ternary regroupings if enough terms
-    if length(flat_terms) >= 6
-        for i = 1:length(flat_terms)-5
-            for j = i+2:length(flat_terms)-3
-                for k = j+2:length(flat_terms)-1
-                    # Group terms into three parts
-                    first_terms = flat_terms[i:j-1]
-                    second_terms = flat_terms[j:k-1]
-                    third_terms = flat_terms[k:end]
-
-                    # Create the groups
-                    first_expr = if length(first_terms) == 1
-                        first_terms[1]
-                    else
-                        Addition(first_terms, expr.space)
-                    end
-
-                    second_expr = if length(second_terms) == 1
-                        second_terms[1]
-                    else
-                        Addition(second_terms, expr.space)
-                    end
-
-                    third_expr = if length(third_terms) == 1
-                        third_terms[1]
-                    else
-                        Addition(third_terms, expr.space)
-                    end
-
-                    # Create the new expression
-                    new_expr = Addition([first_expr, second_expr, third_expr], expr.space)
-                    push!(result, new_expr)
-                end
-            end
-        end
-    end
-
-    return result
-end
-
-"""
-    flatten_addition_terms(expr::Addition) -> Vector{Expression}
-
-Flatten nested additions into a single list of terms.
-
-# Arguments
-- `expr::Addition`: The addition expression to flatten
-
-# Returns
-- `Vector{Expression}`: The flattened terms
-"""
-function flatten_addition_terms(expr::Addition)
-    result = Expression[]
-
-    for term in expr.terms
-        if term isa Addition
-            # Recursively flatten nested additions
-            append!(result, flatten_addition_terms(term))
+# Flatten nested additions
+function flatten_terms(add::Addition)
+    out = Expression[]
+    for t in add.terms
+        if t isa Addition
+            append!(out, flatten_terms(t))
         else
-            push!(result, term)
+            push!(out, t)
+        end
+    end
+    return out
+end
+
+# Wrap a block of terms back into Addition or keep single term
+wrap(terms::Vector{Expression}, space) =
+    length(terms) == 1 ? terms[1] : Addition(terms, space)
+
+# Rebalance addition by generating all binary regroupings
+function rebalance_addition(add::Addition)
+    # flatten nested additions
+    flat = flatten_terms(add)
+    n = length(flat)
+
+    # Only proceed if we have more than 1 term
+    if n <= 1
+        return Reformulation[]
+    end
+
+    # generate all binary regroupings
+    out = Reformulation[]
+    for i = 1:(n-1)
+        A = wrap(flat[1:i], add.space)
+        B = wrap(flat[(i+1):n], add.space)
+
+        # Create a new Addition with properly typed array
+        new_terms = Expression[A, B]
+        new = Addition(new_terms, add.space)
+
+        # Create a reformulation and add it if it's unique
+        reformulation = create_reformulation(new)
+        if !any(r -> r.expr == reformulation.expr, out)
+            push!(out, reformulation)
         end
     end
 
-    return result
+    return out
 end
 
-"""
-    rebalance_expression(expr::Subtraction) -> Vector{Expression}
-
-Generate alternative groupings of a subtraction expression.
-
-# Arguments
-- `expr::Subtraction`: The subtraction expression to rebalance
-
-# Returns
-- `Vector{Expression}`: The rebalanced expressions
-"""
-function rebalance_expression(expr::Subtraction)
-    # Rebalancing subtraction is more complex due to sign changes
-    # For now, we'll implement a simple version
-
-    # If not enough terms, return empty list
-    if length(expr.terms) <= 2
-        return Expression[]
+# Rebalance composition in both associativity directions
+function rebalance_composition(comp::Composition)
+    out = Reformulation[]
+    # f ∘ (g ∘ h) → (f ∘ g) ∘ h
+    if comp.inner isa Composition
+        g, h = comp.inner.outer, comp.inner.inner
+        fg = Composition(comp.outer, g, comp.space)
+        push!(out, create_reformulation(Composition(fg, h, comp.space)))
     end
-
-    result = Expression[]
-
-    # For a - b - c - d, we can regroup as (a - b) - (c - d)
-    if length(expr.terms) == 4
-        left = Subtraction([expr.terms[1], expr.terms[2]], expr.space)
-        right = Subtraction([expr.terms[3], expr.terms[4]], expr.space)
-        new_expr = Subtraction([left, right], expr.space)
-        push!(result, new_expr)
+    # (f ∘ g) ∘ h → f ∘ (g ∘ h)
+    if comp.outer isa Composition
+        f, g = comp.outer.outer, comp.outer.inner
+        gh = Composition(g, comp.inner, comp.space)
+        push!(out, create_reformulation(Composition(f, gh, comp.space)))
     end
-
-    return result
+    return out
 end
 
-"""
-    rebalance_expression(expr::Composition) -> Vector{Expression}
-
-Generate alternative groupings of a composition expression.
-
-# Arguments
-- `expr::Composition`: The composition expression to rebalance
-
-# Returns
-- `Vector{Expression}`: The rebalanced expressions
-"""
-function rebalance_expression(expr::Composition)
-    # Rebalancing composition is generally about associativity
-    # Like f ∘ (g ∘ h) vs (f ∘ g) ∘ h
-
-    result = Expression[]
-
-    # Check if the inner expression is a composition
-    if expr.inner isa Composition
-        # (f ∘ g) ∘ h
-        f = expr.outer
-        g = expr.inner.outer
-        h = expr.inner.inner
-
-        # Create f ∘ (g ∘ h)
-        g_h = Composition(g, h, g.space)
-        f_g_h = Composition(f, g_h, f.space)
-
-        push!(result, f_g_h)
-    end
-
-    return result
-end
-
-# Register the rebalancing strategy
+# Register the strategy
 register_strategy(:rebalancing, RebalancingStrategy())
