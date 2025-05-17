@@ -8,6 +8,33 @@
 const strategy_registry = Dict{Symbol,Strategy}()
 
 """
+    push_unique!(reformulations::Vector{Reformulation}, seen::Set{String}, expr::Expression) -> Bool
+
+Add a reformulation to the collection if its string representation is unique.
+
+# Arguments
+- `reformulations`: Collection to add the reformulation to
+- `seen`: Set of already seen string representations
+- `expr`: Expression to add as a reformulation
+
+# Returns
+- `Bool`: Whether the reformulation was unique and added
+"""
+function push_unique!(
+    reformulations::Vector{Reformulation},
+    seen::Set{String},
+    expr::Expression,
+)
+    repr = string(expr)
+    if !(repr in seen)
+        push!(reformulations, create_reformulation(expr))
+        push!(seen, repr)
+        return true
+    end
+    return false
+end
+
+"""
     register_strategy(name::Symbol, strategy::Strategy) -> Strategy
 
 Register a reformulation strategy.
@@ -141,13 +168,23 @@ function apply_all_strategies(expr::Expression)
     end
 
     # Remove duplicates (based on expression equality)
-    unique_reformulations = unique(r -> r.expr, all_reformulations)
+    # Use a more strict approach to ensure true uniqueness
+    seen = Set{UInt}()
+    unique_reformulations = Reformulation[]
+
+    for reform in all_reformulations
+        hash_val = hash(reform.expr)
+        if !(hash_val in seen)
+            push!(unique_reformulations, reform)
+            push!(seen, hash_val)
+        end
+    end
 
     return unique_reformulations
 end
 
 """
-    generate_reformulations(expr::Expression; max_iterations::Int = 3) -> Vector{Reformulation}
+    generate_reformulations(expr::Expression; max_iterations::Int = 1) -> Vector{Reformulation}
 
 Generate all possible reformulations by applying strategies repeatedly.
 
@@ -158,44 +195,57 @@ Generate all possible reformulations by applying strategies repeatedly.
 # Returns
 - `Vector{Reformulation}`: All generated reformulations
 """
-function generate_reformulations(expr::Expression; max_iterations::Int = 3)
+function generate_reformulations(expr::Expression; max_iterations::Int = 1)
     # Start with the original expression
     all_reformulations = [create_reformulation(expr)]
     current_expressions = [expr]
 
-    # Keep track of expressions we've seen (for faster duplicate checking)
-    seen_expressions = Set{UInt}([hash(expr)])
+    # Global tracking of seen expressions across all iterations
+    seen_expressions = Set{String}([string(expr)])
+
+    # Track which strategies have been applied to each expression
+    # Use string representations for more reliable uniqueness
+    strategy_applied = Dict{String,Set{Symbol}}(string(expr) => Set{Symbol}())
 
     # Apply strategies iteratively
     for i = 1:max_iterations
         new_expressions = Expression[]
 
-        # Apply all strategies to all current expressions
         for current_expr in current_expressions
+            expr_str = string(current_expr)
+
+            # Get or initialize applied set for this expression
+            applied = get!(strategy_applied, expr_str, Set{Symbol}())
+
             for strategy_name in list_strategies()
+                # Skip if this strategy was already applied to this expression
+                if strategy_name in applied
+                    continue
+                end
+
+                # Mark strategy as applied to this expression
+                push!(applied, strategy_name)
+
+                # Apply the strategy
                 strategy = get_strategy(strategy_name)
                 new_reformulations = strategy(current_expr)
 
-                # Add new reformulations to the collection
+                # Add new reformulations uniquely
                 for reformulation in new_reformulations
-                    expr_hash = hash(reformulation.expr)
-
-                    # Check if we've already seen this expression
-                    if !(expr_hash in seen_expressions)
+                    new_str = string(reformulation.expr)
+                    if !(new_str in seen_expressions)
                         push!(all_reformulations, reformulation)
                         push!(new_expressions, reformulation.expr)
-                        push!(seen_expressions, expr_hash)
+                        push!(seen_expressions, new_str)
+                        # Initialize the applied-set for this new expression
+                        strategy_applied[new_str] = Set{Symbol}()
                     end
                 end
             end
         end
 
-        # If no new expressions were generated, stop
-        if isempty(new_expressions)
-            break
-        end
-
-        # Update current expressions for the next iteration
+        # Stop early if no new expressions were found
+        isempty(new_expressions) && break
         current_expressions = new_expressions
     end
 

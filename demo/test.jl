@@ -15,7 +15,7 @@ using Test
 @property g Convex() Lipschitz(5.0)
 @property h Convex()
 expr = f(x) + g(x) + h(x)
-reforms = generate_reformulations(expr)
+reforms = generate_reformulations(expr, max_iterations = 3)
 
 # Rns = Rn(:n)
 

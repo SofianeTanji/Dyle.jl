@@ -1,6 +1,6 @@
 using ..Reformulations: Reformulation, create_reformulation
 using ..Language: Expression, Addition, Composition
-using ..Reformulations: register_strategy, Strategy
+using ..Reformulations: register_strategy, Strategy, push_unique!
 
 """
     RebalancingStrategy <: Strategy
@@ -26,69 +26,91 @@ end
 
 # ————— Helpers —————
 
-# Flatten nested additions
+"""
+    flatten_terms(add::Addition) -> Vector{Expression}
+
+Recursively flatten nested additions into a single vector of terms.
+"""
 function flatten_terms(add::Addition)
-    out = Expression[]
+    terms = Expression[]
     for t in add.terms
         if t isa Addition
-            append!(out, flatten_terms(t))
+            append!(terms, flatten_terms(t))
         else
-            push!(out, t)
+            push!(terms, t)
         end
     end
-    return out
+    return terms
 end
 
-# Wrap a block of terms back into Addition or keep single term
-wrap(terms::Vector{Expression}, space) =
-    length(terms) == 1 ? terms[1] : Addition(terms, space)
+"""
+    wrap_one(terms::Vector{Expression}, space) -> Expression
 
-# Rebalance addition by generating all binary regroupings
+Wrap one or more terms into an Addition expression if needed.
+"""
+function wrap_one(terms::Vector{Expression}, space)
+    return length(terms) == 1 ? terms[1] : Addition(terms, space)
+end
+
+"""
+    rebalance_addition(add::Addition) -> Vector{Reformulation}
+
+Generate all possible regroupings of an addition expression.
+"""
 function rebalance_addition(add::Addition)
-    # flatten nested additions
+    # Flatten nested additions first
     flat = flatten_terms(add)
     n = length(flat)
 
-    # Only proceed if we have more than 1 term
-    if n <= 1
+    # Nothing to rebalance if fewer than 3 terms
+    if n < 3
         return Reformulation[]
     end
 
-    # generate all binary regroupings
     out = Reformulation[]
+    seen = Set{String}()
+
+    # Generate the fully flattened version first
+    flat_expr = Addition(flat, add.space)
+    push_unique!(out, seen, flat_expr)
+
+    # Generate all possible binary regroupings
     for i = 1:(n-1)
-        A = wrap(flat[1:i], add.space)
-        B = wrap(flat[(i+1):n], add.space)
-
-        # Create a new Addition with properly typed array
-        new_terms = Expression[A, B]
-        new = Addition(new_terms, add.space)
-
-        # Create a reformulation and add it if it's unique
-        reformulation = create_reformulation(new)
-        if !any(r -> r.expr == reformulation.expr, out)
-            push!(out, reformulation)
-        end
+        # Left grouping: (terms[1:i]) + (terms[i+1:end])
+        left = wrap_one(flat[1:i], add.space)
+        right = wrap_one(flat[(i+1):n], add.space)
+        binary_expr = Addition([left, right], add.space)
+        push_unique!(out, seen, binary_expr)
     end
 
     return out
 end
 
-# Rebalance composition in both associativity directions
+"""
+    rebalance_composition(comp::Composition) -> Vector{Reformulation}
+
+Rebalance composition according to associativity: f ∘ (g ∘ h) ⟷ (f ∘ g) ∘ h
+"""
 function rebalance_composition(comp::Composition)
     out = Reformulation[]
+    seen = Set{String}()
+
     # f ∘ (g ∘ h) → (f ∘ g) ∘ h
     if comp.inner isa Composition
         g, h = comp.inner.outer, comp.inner.inner
         fg = Composition(comp.outer, g, comp.space)
-        push!(out, create_reformulation(Composition(fg, h, comp.space)))
+        fg_h = Composition(fg, h, comp.space)
+        push_unique!(out, seen, fg_h)
     end
+
     # (f ∘ g) ∘ h → f ∘ (g ∘ h)
     if comp.outer isa Composition
         f, g = comp.outer.outer, comp.outer.inner
         gh = Composition(g, comp.inner, comp.space)
-        push!(out, create_reformulation(Composition(f, gh, comp.space)))
+        f_gh = Composition(f, gh, comp.space)
+        push_unique!(out, seen, f_gh)
     end
+
     return out
 end
 

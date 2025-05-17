@@ -14,6 +14,25 @@ struct Reformulation
     oracles::Dict{DataType,Any}
 end
 
+# Define equality for reformulations based on their expressions
+import Base: ==, hash
+
+# Two reformulations are equal if their expressions are equal
+function ==(r1::Reformulation, r2::Reformulation)
+    return r1.expr == r2.expr && r1.properties == r2.properties && r1.oracles == r2.oracles
+end
+
+# Hash function must be consistent with equality
+function hash(r::Reformulation, h::UInt)
+    return hash(
+        string(r.expr) *
+        " props: " *
+        string(r.properties) *
+        " oracles: " *
+        string(r.oracles),
+        h,
+    )
+end
 
 """
     Strategy
