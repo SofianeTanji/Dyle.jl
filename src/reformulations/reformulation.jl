@@ -9,6 +9,7 @@ using ..Oracles
 include("types.jl")
 include("strategies/registry.jl")
 include("strategies/rebalancing.jl")
+include("strategies/commutativity.jl")
 
 # === PUBLIC API === #
 # Types

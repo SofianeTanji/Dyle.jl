@@ -340,7 +340,7 @@ function show(io::IO, v::Variable)
 end
 
 function show(io::IO, f::FunctionCall)
-    print(io, "[", f.name, "(", join(string.(f.args), ", "), ")", "]")
+    print(io, f.name, "(", join(string.(f.args), ", "), ")")
 end
 
 # Custom printing for Expression types to show grouping with parentheses
