@@ -106,10 +106,8 @@ Rebalance composition according to associativity: f ∘ (g ∘ h) ⟷ (f ∘ g) 
 function rebalance_composition(comp::Composition)
     out = Reformulation[]
     seen = Set{String}()
-    @show "Got inside rebalance_composition"
     # f ∘ (g ∘ h) → (f ∘ g) ∘ h
     if comp.inner isa Composition
-        @show "Got inside if comp.inner isa Composition"
         g, h = comp.inner.outer, comp.inner.inner
         fg = Composition(comp.outer, g, comp.space)
         fg_h = Composition(fg, h, comp.space)
@@ -118,7 +116,6 @@ function rebalance_composition(comp::Composition)
 
     # (f ∘ g) ∘ h → f ∘ (g ∘ h)
     if comp.outer isa Composition
-        @show "Got inside if comp.outer isa Composition"
         f, g = comp.outer.outer, comp.outer.inner
         gh = Composition(g, comp.inner, comp.space)
         f_gh = Composition(f, gh, comp.space)
