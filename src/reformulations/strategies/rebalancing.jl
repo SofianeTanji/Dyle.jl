@@ -24,6 +24,18 @@ function (s::RebalancingStrategy)(expr::Expression)
     end
 end
 
+function (s::RebalancingStrategy)(fc::FunctionCall)
+    # only act if the “function” is itself a Composition
+    if fc.name isa Composition
+        # get all the associative flips on that inner Composition
+        comps = rebalance_composition(fc.name)
+        # reattach the same argument list + space to each
+        return [create_reformulation(FunctionCall(c, fc.args, fc.space)) for c in comps]
+    else
+        return Reformulation[]
+    end
+end
+
 # ————— Helpers —————
 
 """
@@ -75,10 +87,10 @@ function rebalance_addition(add::Addition)
     push_unique!(out, seen, flat_expr)
 
     # Generate all possible binary regroupings
-    for i = 1:(n-1)
+    for i in 1:(n - 1)
         # Left grouping: (terms[1:i]) + (terms[i+1:end])
         left = wrap_one(flat[1:i], add.space)
-        right = wrap_one(flat[(i+1):n], add.space)
+        right = wrap_one(flat[(i + 1):n], add.space)
         binary_expr = Addition([left, right], add.space)
         push_unique!(out, seen, binary_expr)
     end
@@ -94,9 +106,10 @@ Rebalance composition according to associativity: f ∘ (g ∘ h) ⟷ (f ∘ g) 
 function rebalance_composition(comp::Composition)
     out = Reformulation[]
     seen = Set{String}()
-
+    @show "Got inside rebalance_composition"
     # f ∘ (g ∘ h) → (f ∘ g) ∘ h
     if comp.inner isa Composition
+        @show "Got inside if comp.inner isa Composition"
         g, h = comp.inner.outer, comp.inner.inner
         fg = Composition(comp.outer, g, comp.space)
         fg_h = Composition(fg, h, comp.space)
@@ -105,6 +118,7 @@ function rebalance_composition(comp::Composition)
 
     # (f ∘ g) ∘ h → f ∘ (g ∘ h)
     if comp.outer isa Composition
+        @show "Got inside if comp.outer isa Composition"
         f, g = comp.outer.outer, comp.outer.inner
         gh = Composition(g, comp.inner, comp.space)
         f_gh = Composition(f, gh, comp.space)

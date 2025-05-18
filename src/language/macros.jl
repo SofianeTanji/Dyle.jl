@@ -62,6 +62,7 @@ macro func(exprs...)
                             $(QuoteNode(fname)),
                             $(esc(domain)),
                             $(esc(codomain)),
+                            $(esc(codomain)),
                         )
                     ),
                 )
@@ -76,6 +77,7 @@ macro func(exprs...)
                             $(QuoteNode(fname)),
                             $(esc(domain)),
                             $(esc(codomain)),
+                            $(esc(codomain)),
                         )
                     ),
                 )
@@ -83,12 +85,15 @@ macro func(exprs...)
                 # Default to R→R
                 push!(
                     result.args,
-                    :($(esc(fname)) = FunctionType($(QuoteNode(fname)), R(), R())),
+                    :($(esc(fname)) = FunctionType($(QuoteNode(fname)), R(), R(), R())),
                 )
             end
         else
             # Simple name with no type info
-            push!(result.args, :($(esc(expr)) = FunctionType($(QuoteNode(expr)), R(), R())))
+            push!(
+                result.args,
+                :($(esc(expr)) = FunctionType($(QuoteNode(expr)), R(), R(), R())),
+            )
         end
     end
 

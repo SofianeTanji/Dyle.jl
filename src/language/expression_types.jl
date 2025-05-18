@@ -37,26 +37,52 @@ struct Variable <: Expression
 
     # No default constructor - space must be explicitly provided
     function Variable(name::Symbol, space::Space)
-        new(name, space)
+        return new(name, space)
     end
 end
 
-"""FunctionType
+"""FunctionType <: Expression
 A type representing a function's type signature.
 
 Fields:
 - `name::Symbol`: The name of the function.
 - `domain::Space`: The domain space of the function.
 - `codomain::Space`: The codomain space of the function.
+- `space::Space`: The space of the expression (same as codomain).
 """
-struct FunctionType
+struct FunctionType <: Expression
     name::Symbol
     domain::Space
     codomain::Space
+    space::Space
 
+    # 3-arg constructor sets space = codomain
     function FunctionType(name::Symbol, domain::Space, codomain::Space)
-        new(name, domain, codomain)
+        return new(name, domain, codomain, codomain)
     end
+
+    # 4-arg constructor
+    function FunctionType(name::Symbol, domain::Space, codomain::Space, space::Space)
+        return new(name, domain, codomain, space)  # use the provided space
+    end
+end
+
+# Composition operator for two FunctionType objects
+function ∘(f::FunctionType, g::FunctionType)
+    if f.domain != g.codomain
+        error("Type mismatch in function composition: $(g.name) -> $(f.name)")
+    end
+    return Composition(f, g, f.codomain)
+end
+
+# Equality for FunctionType
+function ==(a::FunctionType, b::FunctionType)
+    return a.name == b.name && a.domain == b.domain && a.codomain == b.codomain
+end
+
+# Hash for FunctionType
+function hash(ft::FunctionType, h::UInt)
+    return hash((ft.name, ft.domain, ft.codomain), h)
 end
 
 """FunctionCall <: Expression
@@ -68,30 +94,45 @@ Fields:
 - `space::Space`: The space of the result (the codomain of the function).
 """
 struct FunctionCall <: Expression
-    name::Symbol
+    name::Expression # Changed from Symbol to Expression
     args::Vector{Expression}
     space::Space
 
-    function FunctionCall(name::Symbol, args::Vector{Expression}, space::Space)
-        new(name, args, space)
+    # Constructor for when name is an Expression (e.g., FunctionType or Composition)
+    function FunctionCall(name::Expression, args::Vector{Expression}, space::Space)
+        # Basic validation: if name is a FunctionType, its codomain should match space
+        if name isa FunctionType && name.codomain != space
+            error(
+                "FunctionCall space $(space) does not match FunctionType codomain $(name.codomain)",
+            )
+        end
+        # If name is a Composition, its space (codomain) should match the FunctionCall's space
+        if name isa Composition && name.space != space
+            error(
+                "FunctionCall space $(space) does not match Composition space $(name.space)"
+            )
+        end
+        return new(name, args, space)
     end
 
     # Constructor for when we have a FunctionType and arguments
     function FunctionCall(func::FunctionType, args::Vector{Expression})
         if isempty(args)
-            # Function with no arguments - allowed in our system
-            return new(func.name, args, func.codomain)
+            # Function with no arguments
+            return new(func, args, func.codomain) # func is now the name
         end
 
         # Check that the first argument's space matches the function's domain
+        # This check might need to be more sophisticated if func.domain is complex
+        # or if there are multiple arguments with different domain requirements.
+        # For now, assuming a simple case where the first arg's space is the domain.
         arg_space = args[1].space
-        if arg_space != func.domain
+        if func.domain isa Space && arg_space != func.domain # func.domain might not always be a simple Space
             error(
                 "Type mismatch: function $(func.name) expects argument in $(func.domain) but got $(arg_space)",
             )
         end
-
-        new(func.name, args, func.codomain)
+        return new(func, args, func.codomain) # func is now the name
     end
 end
 
@@ -121,7 +162,7 @@ struct Addition <: Expression
             end
         end
 
-        new(terms, space)
+        return new(terms, space)
     end
 end
 
@@ -152,7 +193,7 @@ struct Subtraction <: Expression
             end
         end
 
-        new(terms, space)
+        return new(terms, space)
     end
 end
 
@@ -174,7 +215,7 @@ struct Composition <: Expression
         # information about function domains and codomains that might not be
         # available for arbitrary expressions. This would require a full type system.
         # For now, we just require the user to provide the expected result space.
-        new(outer, inner, space)
+        return new(outer, inner, space)
     end
 end
 
@@ -204,7 +245,7 @@ struct Maximum <: Expression
             end
         end
 
-        new(terms, space)
+        return new(terms, space)
     end
 end
 
@@ -234,7 +275,7 @@ struct Minimum <: Expression
             end
         end
 
-        new(terms, space)
+        return new(terms, space)
     end
 end
 
@@ -271,20 +312,47 @@ end
 function -(a::Expression, b::Expression)
     if a.space != b.space
         error(
-            "Cannot subtract expressions from different spaces: $(a.space) and $(b.space)",
+            "Cannot subtract expressions from different spaces: $(a.space) and $(b.space)"
         )
     end
     return Subtraction(Expression[a, b], a.space)
 end
 
 function ∘(f::Expression, g::Expression)
-    # For function composition, we need more information to properly check
-    # This is a complex case that requires looking at the domain/codomain of functions
-    # For now, we'll use the outer expression's space for the result
-    # But we cannot verify domain/codomain compatibility at this point
-    error(
-        "Composition requires explicit space information and type checking. Use the parser or constructors directly.",
-    )
+    # Check if both f and g have the domain/codomain attributes
+    if hasfield(typeof(f), :codomain) && hasfield(typeof(g), :domain)
+        # Type checking for function composition
+        if f.codomain != g.domain
+            error(
+                "Type mismatch in composition: $(f.codomain) and $(g.domain) are not compatible.",
+            )
+        end
+        return Composition(f, g, f.codomain)
+    else
+        error(
+            "Cannot compose expressions without type information: $(typeof(f)) and $(typeof(g)).",
+        )
+    end
+end
+
+# composition of a Composition AST with a FunctionType on the right
+function ∘(c::Composition, g::FunctionType)
+    if c.space != g.codomain
+        error(
+            "Type mismatch in composition: $(c.space) and $(g.codomain) are not compatible."
+        )
+    end
+    return Composition(c, g, c.space)
+end
+
+# composition of a FunctionType on the left with a Composition AST on the right
+function ∘(f::FunctionType, c::Composition)
+    if f.domain != c.space
+        error(
+            "Type mismatch in composition: $(f.domain) and $(c.space) are not compatible."
+        )
+    end
+    return Composition(f, c, f.codomain)
 end
 
 function max(a::Expression, b::Expression)
@@ -310,37 +378,42 @@ end
 function (f::FunctionType)(args::Expression...)
     # Convert to vector for consistency, ensuring we get a Vector{Expression}
     args_vec = Expression[arg for arg in args]
+    return FunctionCall(f, args_vec) # Uses the FunctionCall(func::FunctionType, args) constructor
+end
 
-    if isempty(args_vec)
-        # No arguments, return a function call in the codomain
-        return FunctionCall(f.name, args_vec, f.codomain)
-    end
-
-    # Check that the first argument's space matches the function's domain
-    arg_space = args_vec[1].space
-    if arg_space != f.domain
-        error(
-            "Type mismatch: function $(f.name) expects argument in $(f.domain) but got $(arg_space)",
-        )
-    end
-
-    return FunctionCall(f.name, args_vec, f.codomain)
+# Callable Composition: (f ∘ g)(x) should create FunctionCall( (f ∘ g), [x])
+function (c::Composition)(args::Expression...)
+    args_vec = Expression[arg for arg in args]
+    # The space of the FunctionCall is the codomain of the composition
+    # We need to ensure the arguments match the domain of the composition's inner function
+    # This requires knowing the domain of c.inner.
+    # For now, we assume the type checking is handled elsewhere or implicitly by the structure.
+    # A more robust check would be:
+    # if c.inner isa FunctionType && !isempty(args_vec) && args_vec[1].space != c.inner.domain
+    #     error("Argument type mismatch for composition input")
+    # end
+    return FunctionCall(c, args_vec, c.space)
 end
 
 # We don't support directly calling a symbol as a function anymore
 # This should be handled by the parser or by the @func macro
 function (f::Symbol)(args::Expression...)
-    error("Cannot call symbol $(f) as a function. Please declare it with @func first.")
+    return error(
+        "Cannot call symbol $(f) as a function. Please declare it with @func first."
+    )
 end
 
 # String representation
 
 function show(io::IO, v::Variable)
-    print(io, v.name)
+    return print(io, v.name)
 end
 
 function show(io::IO, f::FunctionCall)
-    print(io, f.name, "(", join(string.(f.args), ", "), ")")
+    # If f.name is a FunctionType, print its actual name symbol
+    # Otherwise, print the expression (e.g., a Composition)
+    name_str = f.name isa FunctionType ? string(f.name.name) : string(f.name)
+    return print(io, name_str, "(", join(string.(f.args), ", "), ")")
 end
 
 # Custom printing for Expression types to show grouping with parentheses
@@ -369,7 +442,7 @@ function show(io::IO, s::Subtraction)
     else
         print(io, "(")
         show(io, s.terms[1])
-        for i = 2:length(s.terms)
+        for i in 2:length(s.terms)
             print(io, " - ")
             show(io, s.terms[i])
         end
@@ -382,7 +455,7 @@ function show(io::IO, c::Composition)
     show(io, c.outer)
     print(io, " ∘ ")
     show(io, c.inner)
-    print(io, ")")
+    return print(io, ")")
 end
 
 function show(io::IO, m::Maximum)
@@ -393,7 +466,7 @@ function show(io::IO, m::Maximum)
             print(io, ", ")
         end
     end
-    print(io, ")")
+    return print(io, ")")
 end
 
 function show(io::IO, m::Minimum)
@@ -404,75 +477,86 @@ function show(io::IO, m::Minimum)
             print(io, ", ")
         end
     end
-    print(io, ")")
+    return print(io, ")")
 end
 
 function show(io::IO, l::Literal)
-    print(io, l.value)
+    return print(io, l.value)
 end
 
 function show(io::IO, f::FunctionType)
-    print(io, f.name, ": ", f.domain, " → ", f.codomain)
+    return print(io, f.name, ": ", f.domain, " → ", f.codomain)
 end
-
-
 
 ==(a::Literal, b::Literal) = a.value == b.value && a.space == b.space
 ==(a::Variable, b::Variable) = a.name == b.name && a.space == b.space
 
-==(a::FunctionCall, b::FunctionCall) =
-    a.name == b.name &&
-    a.space == b.space &&
-    length(a.args) == length(b.args) &&
-    all(==(x, y) for (x, y) in zip(a.args, b.args))
+function ==(a::FunctionCall, b::FunctionCall)
+    return a.name == b.name &&
+           a.space == b.space &&
+           length(a.args) == length(b.args) &&
+           all(==(x, y) for (x, y) in zip(a.args, b.args))
+end
 
-==(a::Addition, b::Addition) =
-    a.space == b.space &&
-    length(a.terms) == length(b.terms) &&
-    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+function ==(a::Addition, b::Addition)
+    return a.space == b.space &&
+           length(a.terms) == length(b.terms) &&
+           all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+end
 
-==(a::Subtraction, b::Subtraction) =
-    a.space == b.space &&
-    length(a.terms) == length(b.terms) &&
-    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+function ==(a::Subtraction, b::Subtraction)
+    return a.space == b.space &&
+           length(a.terms) == length(b.terms) &&
+           all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+end
 
-==(a::Composition, b::Composition) =
-    a.space == b.space && a.outer == b.outer && a.inner == b.inner
+function ==(a::Composition, b::Composition)
+    return a.space == b.space && a.outer == b.outer && a.inner == b.inner
+end
 
-==(a::Maximum, b::Maximum) =
-    a.space == b.space &&
-    length(a.terms) == length(b.terms) &&
-    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+function ==(a::Maximum, b::Maximum)
+    return a.space == b.space &&
+           length(a.terms) == length(b.terms) &&
+           all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+end
 
-==(a::Minimum, b::Minimum) =
-    a.space == b.space &&
-    length(a.terms) == length(b.terms) &&
-    all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+function ==(a::Minimum, b::Minimum)
+    return a.space == b.space &&
+           length(a.terms) == length(b.terms) &&
+           all(==(x, y) for (x, y) in zip(a.terms, b.terms))
+end
 
 # fallback
 ==(a::Expression, b::Expression) = false
 
 function hash(l::Literal, h::UInt)
-    hash((l.value, l.space), h)
+    return hash((l.value, l.space), h)
 end
 function hash(v::Variable, h::UInt)
-    hash((v.name, v.space), h)
+    return hash((v.name, v.space), h)
 end
 function hash(fc::FunctionCall, h::UInt)
-    hash((fc.name, fc.space, fc.args), h)
+    return hash((fc.name, fc.space, fc.args), h)
 end
 function hash(ad::Addition, h::UInt)
-    hash((:Addition, ad.space, ad.terms), h)
+    return hash((:Addition, ad.space, ad.terms), h)
 end
 function hash(sb::Subtraction, h::UInt)
-    hash((:Subtraction, sb.space, sb.terms), h)
+    return hash((:Subtraction, sb.space, sb.terms), h)
 end
 function hash(co::Composition, h::UInt)
-    hash((:Composition, co.space, co.outer, co.inner), h)
+    return hash((:Composition, co.space, co.outer, co.inner), h)
 end
 function hash(mx::Maximum, h::UInt)
-    hash((:Maximum, mx.space, mx.terms), h)
+    return hash((:Maximum, mx.space, mx.terms), h)
 end
 function hash(mn::Minimum, h::UInt)
-    hash((:Minimum, mn.space, mn.terms), h)
+    return hash((:Minimum, mn.space, mn.terms), h)
 end
+
+# # Function call on a Composition node: (f ∘ g)(x) → f(g(x))
+# function (c::Composition)(args::Expression...)
+#     # first apply inner to args, then feed result to outer
+#     inner_app = c.inner(args...)
+#     return c.outer(inner_app)
+# end

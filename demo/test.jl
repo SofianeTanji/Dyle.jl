@@ -6,17 +6,18 @@ using Argo.Oracles
 using Argo.Reformulations
 using Test
 
-
 @variable x::R()
+
 @func f(R(), R())
 @func g(R(), R())
 @func h(R(), R())
-@property f StronglyConvex(1.0) Smooth(2.0)
-@property g Convex() Lipschitz(5.0)
-@property h Convex()
-expr = f(x) + g(x) + h(x)
-reforms = generate_reformulations(expr, max_iterations = 3)
-
+# @property f StronglyConvex(1.0) Smooth(2.0)
+# @property g Convex() Lipschitz(5.0)
+# @property h Convex()
+# # expr = f(x) + g(x) + h(x)
+# reforms = generate_reformulations(expr; max_iterations=3)
+expr2 = (f ∘ g ∘ h)(x)
+generate_reformulations(expr2; max_iterations=3)
 # Rns = Rn(:n)
 
 # @variable x::R()
@@ -40,7 +41,6 @@ apply_strategy(:rebalancing, f(x) + g(v) + h(x))
 @property h Linear(1.0, 3.0)
 @property linear_func Linear(1.0, 2.0)
 @property linear_func2 Linear(0.5, 1.5)
-
 
 # Create expressions
 expr1 = f(x) + f(x)
@@ -179,9 +179,9 @@ if expr_add_eval !== nothing && expr_add_deriv !== nothing
     println("  (f + g)'($test_point) = $(expr_add_deriv(test_point))")
 
     @test expr_add_eval(test_point) ≈
-          f_eval(test_point) + get_oracle(:g, EvaluationOracle)(test_point)
+        f_eval(test_point) + get_oracle(:g, EvaluationOracle)(test_point)
     @test expr_add_deriv(test_point) ≈
-          f_deriv(test_point) + get_oracle(:g, DerivativeOracle)(test_point)
+        f_deriv(test_point) + get_oracle(:g, DerivativeOracle)(test_point)
     println("  ✓ Addition oracles combined correctly")
 else
     println("  ✗ Failed to combine addition oracles")
