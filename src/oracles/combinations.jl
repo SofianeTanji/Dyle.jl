@@ -31,14 +31,21 @@ function check_for_special_combination(expr::Expression, oracle_type::DataType)
 
     # Operations with terms (Addition, Subtraction, Maximum, Minimum)
     if hasfield(op_type, :terms) &&
-       all(term -> term isa FunctionCall, getfield(expr, :terms))
-        funcs = [term.name for term in getfield(expr, :terms)]
+        all(term -> term isa FunctionCall, getfield(expr, :terms))
+        # Extract function names as Symbols, not FunctionType objects
+        funcs = [
+            (term.name isa FunctionType ? term.name.name : term.name) for
+            term in getfield(expr, :terms)
+        ]
 
         # Composition
     elseif op_type == Composition &&
-           expr.outer isa FunctionCall &&
-           expr.inner isa FunctionCall
-        funcs = [expr.outer.name, expr.inner.name]
+        expr.outer isa FunctionCall &&
+        expr.inner isa FunctionCall
+        funcs = [
+            (expr.outer.name isa FunctionType ? expr.outer.name.name : expr.outer.name),
+            (expr.inner.name isa FunctionType ? expr.inner.name.name : expr.inner.name),
+        ]
     else
         return nothing
     end
@@ -205,9 +212,9 @@ function combine_oracles(expr::Composition, oracle_type::DataType)
         inner_deriv = get_oracle_for_expression(expr.inner, oracle_type)
 
         if outer_eval === nothing ||
-           inner_eval === nothing ||
-           outer_deriv === nothing ||
-           inner_deriv === nothing
+            inner_eval === nothing ||
+            outer_deriv === nothing ||
+            inner_deriv === nothing
             return nothing
         end
 

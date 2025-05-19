@@ -27,10 +27,13 @@ end
 function (s::RebalancingStrategy)(fc::FunctionCall)
     # only act if the “function” is itself a Composition
     if fc.name isa Composition
-        # get all the associative flips on that inner Composition
-        comps = rebalance_composition(fc.name)
-        # reattach the same argument list + space to each
-        return [create_reformulation(FunctionCall(c, fc.args, fc.space)) for c in comps]
+        # get all the associative flips on that inner Composition (as Reformulation objects)
+        reformulations = rebalance_composition(fc.name)
+        # extract the Expression variants and reattach args
+        exprs = [r.expr for r in reformulations]
+        return [
+            create_reformulation(FunctionCall(expr, fc.args, fc.space)) for expr in exprs
+        ]
     else
         return Reformulation[]
     end

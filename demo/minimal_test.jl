@@ -1,7 +1,11 @@
 using Revise
 using Argo
 using Argo.Language
+using Argo.Reformulations
 using Test
+
+@show list_strategies()
+@show get_strategy(:structure_loss)
 
 @variable x::R()
 @func f(R(), R())
@@ -11,13 +15,15 @@ using Test
 expr_comp = (f ∘ g ∘ h)
 
 typeof(expr_comp) == Composition
-
-using Argo.Reformulations
-
+apply_strategy(:structure_loss, expr_comp) # This doesn't work.
 reform_comp = generate_reformulations(expr_comp)
 
-@test length(reform_comp) == 2
+@test length(reform_comp) == 3
 
+expr_eval = expr_comp(x)
+typeof(expr_eval)
+expr_eval.args
+expr_eval.name
 reform_expr = generate_reformulations(expr_comp(x))
 
-@test length(reform_expr) == 2
+@test length(reform_expr) == 4

@@ -100,39 +100,19 @@ struct FunctionCall <: Expression
 
     # Constructor for when name is an Expression (e.g., FunctionType or Composition)
     function FunctionCall(name::Expression, args::Vector{Expression}, space::Space)
-        # Basic validation: if name is a FunctionType, its codomain should match space
         if name isa FunctionType && name.codomain != space
             error(
-                "FunctionCall space $(space) does not match FunctionType codomain $(name.codomain)",
+                "FunctionCall space $(space) mismatches FunctionType codomain $(name.codomain)",
             )
         end
-        # If name is a Composition, its space (codomain) should match the FunctionCall's space
-        if name isa Composition && name.space != space
-            error(
-                "FunctionCall space $(space) does not match Composition space $(name.space)"
-            )
+        if name isa Composition && name.space != space # .space of Composition is its codomain
+            error("FunctionCall space $(space) mismatches Composition space $(name.space)")
         end
         return new(name, args, space)
     end
-
     # Constructor for when we have a FunctionType and arguments
     function FunctionCall(func::FunctionType, args::Vector{Expression})
-        if isempty(args)
-            # Function with no arguments
-            return new(func, args, func.codomain) # func is now the name
-        end
-
-        # Check that the first argument's space matches the function's domain
-        # This check might need to be more sophisticated if func.domain is complex
-        # or if there are multiple arguments with different domain requirements.
-        # For now, assuming a simple case where the first arg's space is the domain.
-        arg_space = args[1].space
-        if func.domain isa Space && arg_space != func.domain # func.domain might not always be a simple Space
-            error(
-                "Type mismatch: function $(func.name) expects argument in $(func.domain) but got $(arg_space)",
-            )
-        end
-        return new(func, args, func.codomain) # func is now the name
+        return FunctionCall(func, args, func.codomain)
     end
 end
 
@@ -376,22 +356,13 @@ end
 # Function call operators - these are complex and require careful type checking
 
 function (f::FunctionType)(args::Expression...)
-    # Convert to vector for consistency, ensuring we get a Vector{Expression}
     args_vec = Expression[arg for arg in args]
-    return FunctionCall(f, args_vec) # Uses the FunctionCall(func::FunctionType, args) constructor
+    return FunctionCall(f, args_vec, f.codomain)
 end
 
 # Callable Composition: (f ∘ g)(x) should create FunctionCall( (f ∘ g), [x])
 function (c::Composition)(args::Expression...)
     args_vec = Expression[arg for arg in args]
-    # The space of the FunctionCall is the codomain of the composition
-    # We need to ensure the arguments match the domain of the composition's inner function
-    # This requires knowing the domain of c.inner.
-    # For now, we assume the type checking is handled elsewhere or implicitly by the structure.
-    # A more robust check would be:
-    # if c.inner isa FunctionType && !isempty(args_vec) && args_vec[1].space != c.inner.domain
-    #     error("Argument type mismatch for composition input")
-    # end
     return FunctionCall(c, args_vec, c.space)
 end
 

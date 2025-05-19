@@ -26,9 +26,19 @@ function clear_properties!(f::Symbol)
     return nothing
 end
 
-"""get_properties(f::Symbol)
-    Get the properties of the function `f`.
+# "get_properties(f::Symbol)" remains the main entry point
+# But allow Expression names to be inferred by falling back to infer_properties
+using ..Properties: infer_properties  # fallback for composed names
+
+# forward non-Symbol names to structural inference
+function get_properties(f::Expression)
+    return infer_properties(f)  # use full inference for composed or nested names
+end
+
 """
+    get_properties(f::Symbol)
+"""
+# Get the properties of the function `f`.
 function get_properties(f::Symbol)
     if haskey(function_property_registry, f)
         return function_property_registry[f]

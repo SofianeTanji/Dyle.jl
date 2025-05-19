@@ -1,3 +1,9 @@
+# removed invalid import; get_oracle_for_expression is defined in this module via include("combinations.jl")
+
+# forward non-Symbol function names to recursive oracle lookup
+function get_oracle(func::Expression, oracle_type::DataType)
+    return get_oracle_for_expression(func, oracle_type)
+end
 
 # ===== Oracle Registry =====
 
@@ -5,8 +11,7 @@
 const oracle_registry = Dict{Tuple{Symbol,DataType},Oracle}()
 
 # Special combinations registry for operations that can't follow standard rules
-const special_combination_registry =
-    Dict{Tuple{DataType,Vector{Symbol},DataType},Function}()
+const special_combination_registry = Dict{Tuple{DataType,Vector{Symbol},DataType},Function}()
 
 """
     register_oracle!(func::Symbol, oracle::Oracle)
@@ -24,6 +29,7 @@ end
 
 Get an oracle for a function.
 """
+# Note: Symbol dispatch is still needed for function-symbol lookups
 function get_oracle(func::Symbol, oracle_type::DataType)
     return get(oracle_registry, (func, oracle_type), nothing)
 end
@@ -60,10 +66,7 @@ end
 Register a special handler for combining oracles in specific expressions.
 """
 function register_special_combination(
-    op_type::DataType,
-    funcs::Vector{Symbol},
-    oracle_type::DataType,
-    handler::Function,
+    op_type::DataType, funcs::Vector{Symbol}, oracle_type::DataType, handler::Function
 )
     special_combination_registry[(op_type, funcs, oracle_type)] = handler
     return handler
@@ -76,9 +79,7 @@ end
 Get a special combination handler if one exists.
 """
 function get_special_combination(
-    op_type::DataType,
-    funcs::Vector{Symbol},
-    oracle_type::DataType,
+    op_type::DataType, funcs::Vector{Symbol}, oracle_type::DataType
 )
     return get(special_combination_registry, (op_type, funcs, oracle_type), nothing)
 end
@@ -90,9 +91,7 @@ end
 Check if a special combination handler exists.
 """
 function has_special_combination(
-    op_type::DataType,
-    funcs::Vector{Symbol},
-    oracle_type::DataType,
+    op_type::DataType, funcs::Vector{Symbol}, oracle_type::DataType
 )
     return haskey(special_combination_registry, (op_type, funcs, oracle_type))
 end
