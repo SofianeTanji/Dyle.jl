@@ -11,7 +11,13 @@ function infer_properties(expr::Variable)
 end
 
 function infer_properties(expr::FunctionCall)
-    return get_properties(expr.name)
+    # if the function name is a FunctionType, look up registered properties by symbol;
+    # otherwise (e.g. Composition), delegate to its own inference
+    if expr.name isa FunctionType
+        return get_properties(expr.name.name)
+    else
+        return infer_properties(expr.name)
+    end
 end
 
 function infer_properties(expr::Addition)

@@ -21,9 +21,7 @@ Add a reformulation to the collection if its string representation is unique.
 - `Bool`: Whether the reformulation was unique and added
 """
 function push_unique!(
-    reformulations::Vector{Reformulation},
-    seen::Set{String},
-    expr::Expression,
+    reformulations::Vector{Reformulation}, seen::Set{String}, expr::Expression
 )
     repr = string(expr)
     if !(repr in seen)
@@ -195,7 +193,7 @@ Generate all possible reformulations by applying strategies repeatedly.
 # Returns
 - `Vector{Reformulation}`: All generated reformulations
 """
-function generate_reformulations(expr::Expression; max_iterations::Int = 1)
+function generate_reformulations(expr::Expression; max_iterations::Int=1)
     # Start with the original expression
     all_reformulations = [create_reformulation(expr)]
     current_expressions = [expr]
@@ -208,7 +206,7 @@ function generate_reformulations(expr::Expression; max_iterations::Int = 1)
     strategy_applied = Dict{String,Set{Symbol}}(string(expr) => Set{Symbol}())
 
     # Apply strategies iteratively
-    for i = 1:max_iterations
+    for i in 1:max_iterations
         new_expressions = Expression[]
 
         for current_expr in current_expressions
@@ -229,7 +227,6 @@ function generate_reformulations(expr::Expression; max_iterations::Int = 1)
                 # Apply the strategy
                 strategy = get_strategy(strategy_name)
                 new_reformulations = strategy(current_expr)
-
                 # Add new reformulations uniquely
                 for reformulation in new_reformulations
                     new_str = string(reformulation.expr)

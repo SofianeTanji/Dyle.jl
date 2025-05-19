@@ -13,8 +13,9 @@ include("exactness.jl")
 include("cost_models.jl")
 include("metadata.jl")
 include("types.jl")
-include("registry.jl")
+# Load oracle combination logic before registry so registry can reference it
 include("combinations.jl")
+include("registry.jl")
 include("specials.jl")
 include("macros.jl")
 
@@ -46,7 +47,7 @@ export @oracle, @oracles, @clear_oracles
 function __init__()
     # Initialize any necessary state or register standard functions
     register_special_functions()
-    register_special_combinations()
+    return register_special_combinations()
 end
 
 end
