@@ -11,6 +11,7 @@ include("strategies/registry.jl")
 include("strategies/rebalancing.jl")
 include("strategies/commutativity.jl")
 include("strategies/structure_loss.jl")
+include("strategies/monotone_transform.jl")
 
 # === PUBLIC API === #
 # Types

@@ -12,10 +12,10 @@ using Test
 @func g(R(), R())
 @func h(R(), R())
 
-expr_comp = (f ∘ g ∘ h)
+expr_comp = f(x)
 
 typeof(expr_comp) == Composition
-apply_strategy(:structure_loss, expr_comp) # This doesn't work.
+apply_strategy(:monotone_transform, expr_comp)
 reform_comp = generate_reformulations(expr_comp)
 
 @test length(reform_comp) == 3
