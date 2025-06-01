@@ -45,9 +45,9 @@ template = register_template(
 function register_template(
     name::Symbol,
     expression::Expression,
-    description::String = "";
-    function_requirements::Vector{TemplateFunctionRequirement} = TemplateFunctionRequirement[],
-    assumptions::Dict{Symbol,Any} = Dict{Symbol,Any}(),
+    description::String="";
+    function_requirements::Vector{TemplateFunctionRequirement}=TemplateFunctionRequirement[],
+    assumptions::Dict{Symbol,Any}=Dict{Symbol,Any}(),
 )
     if haskey(optimization_templates, name)
         error(
@@ -57,11 +57,7 @@ function register_template(
 
     # Create a new template without any methods initially
     template = OptimizationTemplate(
-        name,
-        description,
-        expression,
-        function_requirements,
-        assumptions,
+        name, description, expression, function_requirements, assumptions
     )
 
     optimization_templates[name] = template
@@ -99,9 +95,9 @@ props = require_function(
 """
 function require_function(
     name::Symbol,
-    description::String = "",
+    description::String          = "",
     properties::Vector{DataType} = DataType[],
-    oracles::Vector{DataType} = DataType[],
+    oracles::Vector{DataType}    = DataType[],
     parameters::Dict{Symbol,Any} = Dict{Symbol,Any}(),
 )
     return TemplateFunctionRequirement(name, description, properties, oracles, parameters)
@@ -130,7 +126,7 @@ method = create_method(
 )
 ```
 """
-function create_method(name::String, description::String = ""; reference::String = "")
+function create_method(name::String, description::String=""; reference::String="")
     return OptimizationMethod(name, description, reference)
 end
 
@@ -173,11 +169,10 @@ function create_rate(
     measure::ConvergenceMeasure,
     bound_function::Function,
     asymptotic_notation::String;
-    parameter_references::Dict{Symbol,Tuple{Symbol,Symbol}} = Dict{
-        Symbol,
-        Tuple{Symbol,Symbol},
+    parameter_references::Dict{Symbol,Tuple{Symbol,Symbol}}=Dict{
+        Symbol,Tuple{Symbol,Symbol}
     }(),
-    conditions::Dict{Symbol,Any} = Dict{Symbol,Any}(),
+    conditions::Dict{Symbol,Any}=Dict{Symbol,Any}(),
 )
     return ConvergenceRate(
         name,
@@ -214,9 +209,7 @@ add_method_to_template(
 ```
 """
 function add_method_to_template(
-    template_name::Symbol,
-    method::OptimizationMethod,
-    rate::ConvergenceRate,
+    template_name::Symbol, method::OptimizationMethod, rate::ConvergenceRate
 )
     if !haskey(optimization_templates, template_name)
         error("Template '$(template_name)' does not exist.")

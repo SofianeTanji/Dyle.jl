@@ -55,7 +55,7 @@ end
 
 function _extract_functions_helper!(functions::Vector{Symbol}, expr::Composition)
     _extract_functions_helper!(functions, expr.outer)
-    _extract_functions_helper!(functions, expr.inner)
+    return _extract_functions_helper!(functions, expr.inner)
 end
 
 function _extract_functions_helper!(functions::Vector{Symbol}, expr::Maximum)
@@ -101,7 +101,7 @@ function matches_expression_structure(expr::Expression, template_expr::Expressio
         end
 
         # Check each argument recursively
-        for i = 1:length(expr.args)
+        for i in 1:length(expr.args)
             if !matches_expression_structure(expr.args[i], template_expr.args[i])
                 return false
             end
@@ -115,7 +115,7 @@ function matches_expression_structure(expr::Expression, template_expr::Expressio
 
         # In a more complex implementation, we would check all permutations
         # For simplicity, we just check positional matches
-        for i = 1:length(expr.terms)
+        for i in 1:length(expr.terms)
             if !matches_expression_structure(expr.terms[i], template_expr.terms[i])
                 return false
             end
@@ -128,7 +128,7 @@ function matches_expression_structure(expr::Expression, template_expr::Expressio
         end
 
         # Check each term - order matters for subtraction
-        for i = 1:length(expr.terms)
+        for i in 1:length(expr.terms)
             if !matches_expression_structure(expr.terms[i], template_expr.terms[i])
                 return false
             end
@@ -146,7 +146,7 @@ function matches_expression_structure(expr::Expression, template_expr::Expressio
 
         # Like addition, we would ideally check all permutations
         # For simplicity, we just check positional matches
-        for i = 1:length(expr.terms)
+        for i in 1:length(expr.terms)
             if !matches_expression_structure(expr.terms[i], template_expr.terms[i])
                 return false
             end
@@ -232,9 +232,7 @@ Check if an expression function meets the requirements specified for a template 
 - `true` if the function meets all requirements, `false` otherwise
 """
 function meets_function_requirements(
-    expr_func::Symbol,
-    template_func::Symbol,
-    template::OptimizationTemplate,
+    expr_func::Symbol, template_func::Symbol, template::OptimizationTemplate
 )
     # Find the requirements for this template function
     requirements = nothing

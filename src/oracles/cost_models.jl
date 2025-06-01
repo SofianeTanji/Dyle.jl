@@ -15,7 +15,7 @@ Constant cost independent of problem dimensions.
 """
 struct ConstantCost <: CostModel
     value::Float64
-    ConstantCost(value::Float64 = 1.0) = new(value)
+    ConstantCost(value::Float64=1.0) = new(value)
 end
 
 """
@@ -25,15 +25,15 @@ struct DimensionalCost <: CostModel
     dimensions::Dict{Symbol,Float64}  # dimension => exponent
     coefficient::Float64
 
-    function DimensionalCost(dimensions::Dict{Symbol,Float64}, coefficient::Float64 = 1.0)
+    function DimensionalCost(dimensions::Dict{Symbol,Float64}, coefficient::Float64=1.0)
         coefficient >= 0 || error("Coefficient must be non-negative")
-        new(dimensions, coefficient)
+        return new(dimensions, coefficient)
     end
 
     # Convenience constructor for single dimension
-    function DimensionalCost(dim::Symbol, exponent::Float64, coefficient::Float64 = 1.0)
+    function DimensionalCost(dim::Symbol, exponent::Float64, coefficient::Float64=1.0)
         coefficient >= 0 || error("Coefficient must be non-negative")
-        new(Dict(dim => exponent), coefficient)
+        return new(Dict(dim => exponent), coefficient)
     end
 end
 
@@ -42,7 +42,7 @@ end
 
 Evaluate the cost with given dimension values.
 """
-evaluate_cost(cost::ConstantCost, dims::Dict{Symbol,Int} = Dict{Symbol,Int}()) = cost.value
+evaluate_cost(cost::ConstantCost, dims::Dict{Symbol,Int}=Dict{Symbol,Int}()) = cost.value
 
 function evaluate_cost(cost::DimensionalCost, dims::Dict{Symbol,Int})
     result = cost.coefficient

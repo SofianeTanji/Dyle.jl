@@ -353,6 +353,43 @@ function min(a::Expression, b::Expression)
     return Minimum(Expression[a, b], a.space)
 end
 
+# n-ary max/min building flat nodes
+function max(a::Expression, b::Expression, rest::Expression...)
+    space = a.space
+    terms = Expression[]
+    for expr in (a, b, rest...)
+        if expr.space != space
+            error(
+                "Cannot take maximum of expressions from different spaces: $(space) and $(expr.space)",
+            )
+        end
+        if expr isa Maximum
+            append!(terms, expr.terms)
+        else
+            push!(terms, expr)
+        end
+    end
+    return Maximum(terms, space)
+end
+
+function min(a::Expression, b::Expression, rest::Expression...)
+    space = a.space
+    terms = Expression[]
+    for expr in (a, b, rest...)
+        if expr.space != space
+            error(
+                "Cannot take minimum of expressions from different spaces: $(space) and $(expr.space)",
+            )
+        end
+        if expr isa Minimum
+            append!(terms, expr.terms)
+        else
+            push!(terms, expr)
+        end
+    end
+    return Minimum(terms, space)
+end
+
 # Function call operators - these are complex and require careful type checking
 
 function (f::FunctionType)(args::Expression...)

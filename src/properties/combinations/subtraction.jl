@@ -37,17 +37,16 @@ function combine_properties_subtraction(p1::Lipschitz, p2::Convex)
 end
 
 function combine_properties_subtraction(p1::Convex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Linear, p2::Convex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Convex, p2::Quadratic)
     return nothing
 end
-
 
 function combine_properties_subtraction(p1::Quadratic, p2::Convex)
     return nothing
@@ -103,11 +102,11 @@ function combine_properties_subtraction(p1::Lipschitz, p2::StronglyConvex)
 end
 
 function combine_properties_subtraction(p1::StronglyConvex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Linear, p2::StronglyConvex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::StronglyConvex, p2::Quadratic)
@@ -159,11 +158,11 @@ function combine_properties_subtraction(p1::Lipschitz, p2::HypoConvex)
 end
 
 function combine_properties_subtraction(p1::HypoConvex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Linear, p2::HypoConvex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::HypoConvex, p2::Quadratic)
@@ -248,11 +247,11 @@ function combine_properties_subtraction(p1::Lipschitz, p2::Smooth)
 end
 
 function combine_properties_subtraction(p1::Smooth, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Linear, p2::Smooth)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Smooth, p2::Quadratic)
@@ -283,11 +282,11 @@ function combine_properties_subtraction(p1::Lipschitz, p2::Lipschitz)
 end
 
 function combine_properties_subtraction(p1::Lipschitz, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Linear, p2::Lipschitz)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Lipschitz, p2::Quadratic)
@@ -315,11 +314,11 @@ function combine_properties_subtraction(p1::Linear, p2::Linear)
 end
 
 function combine_properties_subtraction(p1::Linear, p2::Quadratic)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_subtraction(p1::Quadratic, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 # === QUADRATIC === #

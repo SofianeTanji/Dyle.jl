@@ -20,16 +20,19 @@ struct EvaluationOracle <: Oracle
     metadata::OracleMetadata
 
     # Default constructor for exact oracle
-    EvaluationOracle(implementation::Function) =
-        new(implementation, OracleMetadata(exactness = Exact()))
+    function EvaluationOracle(implementation::Function)
+        return new(implementation, OracleMetadata(; exactness=Exact()))
+    end
 
     # Constructor with exactness
-    EvaluationOracle(implementation::Function, exactness::Exactness) =
-        new(implementation, OracleMetadata(exactness = exactness))
+    function EvaluationOracle(implementation::Function, exactness::Exactness)
+        return new(implementation, OracleMetadata(; exactness=exactness))
+    end
 
     # Constructor with metadata
-    EvaluationOracle(implementation::Function, metadata::OracleMetadata) =
-        new(implementation, metadata)
+    function EvaluationOracle(implementation::Function, metadata::OracleMetadata)
+        return new(implementation, metadata)
+    end
 end
 
 """
@@ -42,16 +45,19 @@ struct DerivativeOracle <: Oracle
     metadata::OracleMetadata
 
     # Default constructor for exact oracle
-    DerivativeOracle(implementation::Function) =
-        new(implementation, OracleMetadata(exactness = Exact()))
+    function DerivativeOracle(implementation::Function)
+        return new(implementation, OracleMetadata(; exactness=Exact()))
+    end
 
     # Constructor with exactness
-    DerivativeOracle(implementation::Function, exactness::Exactness) =
-        new(implementation, OracleMetadata(exactness = exactness))
+    function DerivativeOracle(implementation::Function, exactness::Exactness)
+        return new(implementation, OracleMetadata(; exactness=exactness))
+    end
 
     # Constructor with metadata
-    DerivativeOracle(implementation::Function, metadata::OracleMetadata) =
-        new(implementation, metadata)
+    function DerivativeOracle(implementation::Function, metadata::OracleMetadata)
+        return new(implementation, metadata)
+    end
 end
 
 """
@@ -64,29 +70,33 @@ struct ProximalOracle <: Oracle
     metadata::OracleMetadata
 
     # Default constructor for exact oracle
-    ProximalOracle(implementation::Function) =
-        new(implementation, OracleMetadata(exactness = Exact()))
+    function ProximalOracle(implementation::Function)
+        return new(implementation, OracleMetadata(; exactness=Exact()))
+    end
 
     # Constructor with exactness
-    ProximalOracle(implementation::Function, exactness::Exactness) =
-        new(implementation, OracleMetadata(exactness = exactness))
+    function ProximalOracle(implementation::Function, exactness::Exactness)
+        return new(implementation, OracleMetadata(; exactness=exactness))
+    end
 
     # Constructor with metadata
-    ProximalOracle(implementation::Function, metadata::OracleMetadata) =
-        new(implementation, metadata)
+    function ProximalOracle(implementation::Function, metadata::OracleMetadata)
+        return new(implementation, metadata)
+    end
 end
 
 # Callable interface for oracles
 (oracle::Oracle)(args...) = oracle.implementation(args...)
 
-
-==(o1::EvaluationOracle, o2::EvaluationOracle) =
-    o1.metadata.exactness == o2.metadata.exactness
+function ==(o1::EvaluationOracle, o2::EvaluationOracle)
+    return o1.metadata.exactness == o2.metadata.exactness
+end
 hash(o::EvaluationOracle, h::UInt) = hash(o.metadata.exactness, h)
 
 # Do similarly for DerivativeOracle and ProximalOracle:
-==(o1::DerivativeOracle, o2::DerivativeOracle) =
-    o1.metadata.exactness == o2.metadata.exactness
+function ==(o1::DerivativeOracle, o2::DerivativeOracle)
+    return o1.metadata.exactness == o2.metadata.exactness
+end
 hash(o::DerivativeOracle, h::UInt) = hash(o.metadata.exactness, h)
 
 ==(o1::ProximalOracle, o2::ProximalOracle) = o1.metadata.exactness == o2.metadata.exactness

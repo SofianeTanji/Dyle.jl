@@ -48,7 +48,6 @@ function combine_properties_maximum(p1::Convex, p2::Quadratic)
     return nothing
 end
 
-
 function combine_properties_maximum(p1::Quadratic, p2::Convex)
     return combine_properties_maximum(p2, p1)
 end

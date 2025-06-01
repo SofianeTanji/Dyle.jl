@@ -48,7 +48,6 @@ function combine_properties_composition(p1::Convex, p2::Quadratic)
     return nothing
 end
 
-
 function combine_properties_composition(p1::Quadratic, p2::Convex)
     return nothing
 end
@@ -91,7 +90,7 @@ function combine_properties_composition(p1::StronglyConvex, p2::Linear)
         return Convex()
     end
     return StronglyConvex(
-        Interval(p1.μ.lower + p2.λₘᵢₙ.lower^2, p1.μ.upper + p2.λₘᵢₙ.upper^2),
+        Interval(p1.μ.lower + p2.λₘᵢₙ.lower^2, p1.μ.upper + p2.λₘᵢₙ.upper^2)
     )
 end
 
@@ -234,8 +233,7 @@ end
 
 # === SPECIAL CASES === #
 function combine_properties_composition(
-    outer_props::Set{Property},
-    inner_props::Set{Property},
+    outer_props::Set{Property}, inner_props::Set{Property}
 )
     result = Set{Property}()
 

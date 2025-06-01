@@ -48,7 +48,6 @@ function combine_properties_minimum(p1::Convex, p2::Quadratic)
     return nothing
 end
 
-
 function combine_properties_minimum(p1::Quadratic, p2::Convex)
     return combine_properties_minimum(p2, p1)
 end

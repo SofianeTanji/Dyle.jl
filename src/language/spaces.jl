@@ -21,7 +21,7 @@ struct Rn <: Space
 
     function Rn(n::Int)
         n > 0 || error("Dimension must be positive")
-        new(n)
+        return new(n)
     end
 
     # Allow symbolic dimensions

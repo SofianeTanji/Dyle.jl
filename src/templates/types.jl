@@ -115,7 +115,7 @@ function OptimizationTemplate(
     description::String,
     expression::Expression,
     function_requirements::Vector{TemplateFunctionRequirement},
-    assumptions::Dict{Symbol,Any} = Dict{Symbol,Any}(),
+    assumptions::Dict{Symbol,Any}=Dict{Symbol,Any}(),
 )
     return OptimizationTemplate(
         name,

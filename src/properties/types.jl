@@ -56,45 +56,46 @@ struct MonotonicallyIncreasing <: Property end
 
 struct StronglyConvex <: Property
     μ::Union{Interval,Nothing} # can be unspecified
-    StronglyConvex(μ::Union{Nothing} = nothing) = new(nothing)
+    StronglyConvex(μ::Union{Nothing}=nothing) = new(nothing)
     StronglyConvex(μ::Float64) = new(Interval(μ, μ))
     StronglyConvex(μ::Interval) = new(μ)
 end
 
 struct HypoConvex <: Property
     ρ::Union{Interval,Nothing} # can be unspecified
-    HypoConvex(ρ::Union{Nothing} = nothing) = new(nothing)
+    HypoConvex(ρ::Union{Nothing}=nothing) = new(nothing)
     HypoConvex(ρ::Float64) = new(Interval(ρ, ρ))
     HypoConvex(ρ::Interval) = new(ρ)
 end
 
 struct Smooth <: Property
     L::Union{Interval,Nothing} # can be unspecified
-    Smooth(L::Union{Nothing} = nothing) = new(nothing)
+    Smooth(L::Union{Nothing}=nothing) = new(nothing)
     Smooth(L::Float64) = new(Interval(L, L))
     Smooth(L::Interval) = new(L)
 end
 
 struct Lipschitz <: Property
     M::Union{Interval,Nothing} # can be unspecified
-    Lipschitz(M::Union{Nothing} = nothing) = new(nothing)
+    Lipschitz(M::Union{Nothing}=nothing) = new(nothing)
     Lipschitz(M::Float64) = new(Interval(M, M))
     Lipschitz(M::Interval) = new(M)
 end
-
 
 struct Linear <: Property
     λₘᵢₙ::Union{Interval,Nothing} # can be unspecified
     λₘₐₓ::Union{Interval,Nothing} # can be unspecified
 
     # Constructor for proper intervals
-    Linear(
-        λₘᵢₙ::Union{Interval,Float64,Nothing} = nothing,
-        λₘₐₓ::Union{Interval,Float64,Nothing} = nothing,
-    ) = new(
-        isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
-        isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+    function Linear(
+        λₘᵢₙ::Union{Interval,Float64,Nothing}=nothing,
+        λₘₐₓ::Union{Interval,Float64,Nothing}=nothing,
     )
+        return new(
+            isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
+            isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+        )
+    end
 end
 
 struct Quadratic <: Property
@@ -102,15 +103,16 @@ struct Quadratic <: Property
     λₘₐₓ::Union{Interval,Nothing} # can be unspecified
 
     # Constructor for proper intervals
-    Quadratic(
-        λₘᵢₙ::Union{Interval,Float64,Nothing} = nothing,
-        λₘₐₓ::Union{Interval,Float64,Nothing} = nothing,
-    ) = new(
-        isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
-        isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+    function Quadratic(
+        λₘᵢₙ::Union{Interval,Float64,Nothing}=nothing,
+        λₘₐₓ::Union{Interval,Float64,Nothing}=nothing,
     )
+        return new(
+            isa(λₘᵢₙ, Float64) ? Interval(λₘᵢₙ) : λₘᵢₙ,
+            isa(λₘₐₓ, Float64) ? Interval(λₘₐₓ) : λₘₐₓ,
+        )
+    end
 end
-
 
 # Define equality for Convex: all Convex instances are equivalent
 ==(p1::Convex, p2::Convex) = true

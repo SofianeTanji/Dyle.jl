@@ -41,11 +41,11 @@ function combine_properties_addition(p1::Lipschitz, p2::Convex)
 end
 
 function combine_properties_addition(p1::Convex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Linear, p2::Convex)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Convex, p2::Quadratic)
@@ -130,7 +130,7 @@ function combine_properties_addition(p1::Lipschitz, p2::StronglyConvex)
 end
 
 function combine_properties_addition(p1::StronglyConvex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Linear, p2::StronglyConvex)
@@ -142,7 +142,6 @@ function combine_properties_addition(p1::StronglyConvex, p2::Quadratic)
         return nothing
     end
     result = p1.μ + p2.λₘᵢₙ
-
 
     if result.lower > 0
         return StronglyConvex(result)
@@ -191,7 +190,7 @@ function combine_properties_addition(p1::Lipschitz, p2::HypoConvex)
 end
 
 function combine_properties_addition(p1::HypoConvex, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Linear, p2::HypoConvex)
@@ -235,7 +234,7 @@ function combine_properties_addition(p1::Lipschitz, p2::Smooth)
 end
 
 function combine_properties_addition(p1::Smooth, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Linear, p2::Smooth)
@@ -269,7 +268,7 @@ function combine_properties_addition(p1::Lipschitz, p2::Lipschitz)
 end
 
 function combine_properties_addition(p1::Lipschitz, p2::Linear)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Linear, p2::Lipschitz)
@@ -303,7 +302,7 @@ function combine_properties_addition(p1::Linear, p2::Linear)
 end
 
 function combine_properties_addition(p1::Linear, p2::Quadratic)
-    error("Dimension mismatch. Operation not supposed to be performed.")
+    return error("Dimension mismatch. Operation not supposed to be performed.")
 end
 
 function combine_properties_addition(p1::Quadratic, p2::Linear)

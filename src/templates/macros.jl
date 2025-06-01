@@ -52,11 +52,7 @@ req = @require_function(
 ```
 """
 macro require_function(
-    func_name,
-    description,
-    properties,
-    oracles,
-    parameters = :(Dict{Symbol,Any}()),
+    func_name, description, properties, oracles, parameters=:(Dict{Symbol,Any}())
 )
     return quote
         require_function(
@@ -128,9 +124,9 @@ Macro for creating an optimization method.
 @method("Gradient Descent", "First-order method using gradients", :smooth_convex_min)
 ```
 """
-macro method(name, description, template_name, reference = "")
+macro method(name, description, template_name, reference="")
     return quote
-        create_method($(esc(name)), $(esc(description)), reference = $(esc(reference)))
+        create_method($(esc(name)), $(esc(description)); reference=$(esc(reference)))
     end
 end
 
@@ -167,8 +163,8 @@ macro rate(
     measure,
     bound_func,
     asymptotic,
-    parameter_refs = :(Dict{Symbol,Tuple{Symbol,Symbol}}()),
-    conditions = :(Dict{Symbol,Any}()),
+    parameter_refs=:(Dict{Symbol,Tuple{Symbol,Symbol}}()),
+    conditions=:(Dict{Symbol,Any}()),
 )
     return quote
         create_rate(
@@ -176,9 +172,9 @@ macro rate(
             $(esc(description)),
             $(esc(measure)),
             $(esc(bound_func)),
-            $(esc(asymptotic)),
-            parameter_references = $(esc(parameter_refs)),
-            conditions = $(esc(conditions)),
+            $(esc(asymptotic));
+            parameter_references=$(esc(parameter_refs)),
+            conditions=$(esc(conditions)),
         )
     end
 end

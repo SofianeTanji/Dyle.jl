@@ -76,7 +76,7 @@ macro oracle(func, oracle_expr, cost_expr)
                 exactness = $(esc(exactness)),
                 cost = $(esc(cost_expr))
 
-                metadata = OracleMetadata(cost = cost, exactness = exactness)
+                metadata = OracleMetadata(; cost=cost, exactness=exactness)
                 oracle = $(esc(oracle_type))(implementation, metadata)
                 register_oracle!($(QuoteNode(func_name)), oracle)
             end
@@ -84,8 +84,7 @@ macro oracle(func, oracle_expr, cost_expr)
     else
         return quote
             let implementation = $(esc(implementation)), cost = $(esc(cost_expr))
-
-                metadata = OracleMetadata(cost = cost)
+                metadata = OracleMetadata(; cost=cost)
                 oracle = $(esc(oracle_type))(implementation, metadata)
                 register_oracle!($(QuoteNode(func_name)), oracle)
             end

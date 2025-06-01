@@ -3,5 +3,11 @@ uuid = "e00da184-d7e2-53e1-b9b4-77df80479b38"
 authors = ["Sofiane <sofiane.tanji@uclouvain.be>"]
 version = "0.1.0"
 
+[deps]
+GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+
 [compat]
+GraphRecipes = "0.5.14"
+Plots = "1.40.13"
 julia = "1.10"
