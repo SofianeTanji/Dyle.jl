@@ -3,9 +3,9 @@ module Properties
 using ..Language
 include("types.jl")
 include("specials.jl")
+include("inference.jl")
 include("registry.jl")
 include("macros.jl")
-include("inference.jl")
 
 # Combinations
 include("combinations/addition.jl")

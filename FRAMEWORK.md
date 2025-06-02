@@ -59,7 +59,7 @@ const DATABASE = Dict{Tuple{Template,Method},Vector{Rate}}()
 ```
 - Database population & module layout:
   - Files under `src/database/`:
-    - `database.jl`: Defines `module ArgoDatabase`, exports `DATABASE`, `get_rates`, `list_*`, `NotFoundError`; includes `entries.jl` and `queries.jl`.
+    - `database.jl`: Defines `module Database`, exports `DATABASE`, `get_rates`, `list_*`, `NotFoundError`; includes `entries.jl` and `queries.jl`.
     - `entries.jl`: Contains grouped `DATABASE[...] = [...]` assignments under `# Template: ...` headings.
     - `queries.jl`: Implements all query and listing functions and error type.
 
@@ -87,4 +87,4 @@ const DATABASE = Dict{Tuple{Template,Method},Vector{Rate}}()
     - Multiple-rate scenarios returning correct vectors.
 
 - Exporting:
-  - `module ArgoDatabase` should `export DATABASE, get_rates, list_templates, list_methods, list_measures, NotFoundError`.
+  - `module Database` should `export DATABASE, get_rates, list_templates, list_methods, list_measures, NotFoundError`.
