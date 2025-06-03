@@ -55,9 +55,9 @@ Structure representing an optimization algorithm or method.
 - `reference::String`: Reference to a paper or book describing the method
 """
 struct OptimizationMethod
-    name::String
+    name::Symbol
     description::String
-    reference::String  # Paper or book reference
+    reference::String
 end
 
 """
@@ -77,7 +77,7 @@ Structure representing the convergence rate of an optimization method.
 struct ConvergenceRate
     name::String
     description::String
-    measure::ConvergenceMeasure
+    measure::Symbol
     bound_function::Function                          # (k, initial_measure, params) -> bound_value
     asymptotic_notation::String                       # e.g., "O(1/k)", "O(1/k²)", "O(ρᵏ)"
     parameter_references::Dict{Symbol,Tuple{Symbol,Symbol}}  # param_name => (func_name, param_name)
@@ -124,5 +124,41 @@ function OptimizationTemplate(
         function_requirements,
         Tuple{OptimizationMethod,ConvergenceRate}[],
         assumptions,
+    )
+end
+
+# DSL constructor for simple Template usage
+function OptimizationTemplate(name::Symbol, expression, assumptions)
+    # Create template with empty description, no function requirements, and empty assumptions
+    return OptimizationTemplate(
+        name, "", expression, TemplateFunctionRequirement[], Dict{Symbol,Any}()
+    )
+end
+
+# Constructor for DSL-style Method
+function OptimizationMethod(
+    name::Symbol,
+    template::OptimizationTemplate,
+    required_params::Vector{Symbol},
+    options::Vector{Symbol},
+    metadata,
+)
+    desc = get(metadata, "description", "")
+    ref = get(metadata, "reference", "")
+    return OptimizationMethod(name, desc, ref)
+end
+
+# Constructor for DSL-style Rate
+function ConvergenceRate(measure::Symbol, bound_fn, conditions)
+    # If user passed an Expr for bound function, evaluate it to get a Function
+    if bound_fn isa Expr
+        bound_fn = eval(bound_fn)
+    end
+    name = string(measure)
+    description = ""
+    asymptotic_notation = ""
+    param_refs = Dict{Symbol,Tuple{Symbol,Symbol}}()
+    return ConvergenceRate(
+        name, description, measure, bound_fn, asymptotic_notation, param_refs, conditions
     )
 end

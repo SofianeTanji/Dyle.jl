@@ -31,7 +31,16 @@ end
 
 # Helper function to recursively extract function symbols
 function _extract_functions_helper!(functions::Vector{Symbol}, expr::FunctionCall)
-    push!(functions, expr.name)
+    # Determine function symbol from the call name expression
+    if expr.name isa Symbol
+        func_sym = expr.name
+    elseif expr.name isa FunctionType
+        func_sym = expr.name.name
+    else
+        # Unsupported name type, skip
+        return nothing
+    end
+    push!(functions, func_sym)
     for arg in expr.args
         _extract_functions_helper!(functions, arg)
     end
